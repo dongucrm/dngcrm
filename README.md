@@ -33,7 +33,7 @@ Service role key, secret key veya database password kesinlikle kullanılmamalıd
 
 ## GitHub Pages Yayını
 
-GitHub Pages yayını için proje `vite.config.ts` içinde `/dongu-crm/` base path'iyle hazırlanmıştır.
+GitHub Pages yayını için proje `vite.config.ts` içinde `/dngcrm/` base path'iyle hazırlanmıştır.
 
 1. GitHub repo sayfasında `Settings` bölümünü açın.
 2. `Pages` menüsüne girin.
