@@ -1,5 +1,5 @@
 import { CheckCircle2, CircleDashed } from 'lucide-react'
-import { isSupabaseConfigured } from '../lib/supabase'
+import { hasRequiredSupabaseEnv } from '../config/env'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const checks = [
@@ -8,7 +8,7 @@ const checks = [
   { label: 'TypeScript', ready: true },
   { label: 'Tailwind CSS', ready: true },
   { label: 'React Router', ready: true },
-  { label: 'Supabase JS', ready: isSupabaseConfigured },
+  { label: 'Supabase JS', ready: hasRequiredSupabaseEnv() },
 ]
 
 export function HealthPage() {

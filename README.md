@@ -18,14 +18,18 @@ npm run lint
 npm run preview
 ```
 
-## Ortam Değişkenleri
+## Supabase Bağlantısı
 
-`.env.example` dosyasını temel alarak Supabase bilgilerini tanımlayın.
+Supabase bağlantısı için gerçek değerleri repoya eklemeyin. Yerelde `.env.local` dosyası oluşturun ve `.env.example` içeriğini temel alın:
 
 ```bash
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
+
+`VITE_SUPABASE_URL` değerini Supabase proje URL'siyle, `VITE_SUPABASE_PUBLISHABLE_KEY` değerini ise yalnızca publishable key ile değiştirin.
+
+Service role key, secret key veya database password kesinlikle kullanılmamalıdır. `.env.local` Git'e gönderilmez; sadece `.env.example` örnek değerlerle repoda tutulur.
 
 ## Yapı
 
@@ -34,6 +38,7 @@ VITE_SUPABASE_ANON_KEY=
 - `src/pages`: İlk sayfalar
 - `src/features`: Özellik bazlı modüller
 - `src/lib`: Harici servis istemcileri
+- `src/config`: Environment doğrulama dosyaları
 - `src/types`: Paylaşılan TypeScript tipleri
 - `src/hooks`: React hook'ları
 - `src/utils`: Yardımcı fonksiyonlar
