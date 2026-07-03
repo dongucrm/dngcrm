@@ -31,6 +31,18 @@ VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 
 Service role key, secret key veya database password kesinlikle kullanılmamalıdır. `.env.local` Git'e gönderilmez; sadece `.env.example` örnek değerlerle repoda tutulur.
 
+## GitHub Pages Yayını
+
+GitHub Pages yayını için proje `vite.config.ts` içinde `/dongu-crm/` base path'iyle hazırlanmıştır.
+
+1. GitHub repo sayfasında `Settings` bölümünü açın.
+2. `Pages` menüsüne girin.
+3. `Source` olarak `GitHub Actions` seçin.
+4. `Settings > Secrets and variables > Actions` bölümünden repository secrets ekleyin:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+5. `main` branch'e push sonrası `.github/workflows/deploy.yml` otomatik olarak build alır ve `dist` klasörünü GitHub Pages'e yayınlar.
+
 ## Yapı
 
 - `src/components`: Ortak arayüz bileşenleri
