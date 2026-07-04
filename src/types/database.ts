@@ -1,6 +1,7 @@
 export type DatabaseId = string
 export type Timestamp = string
 export type DateString = string
+export type AppRole = 'admin' | 'satis_personeli'
 
 export type ProgramType =
   | 'kamp'
@@ -54,7 +55,7 @@ export type CallStatus =
 
 export type Role = {
   id: DatabaseId
-  name: 'admin' | 'satis_personeli' | string
+  name: AppRole | string
   description: string | null
   created_at: Timestamp | null
 }

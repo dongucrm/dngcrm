@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { navItems } from '../routes/navigation'
 import { cn } from '../utils/cn'
 
@@ -9,6 +10,27 @@ type SidebarProps = {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { isAdmin, roleName, user } = useAuth()
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.hideWhenAuthenticated && user) {
+      return false
+    }
+
+    if (!item.requiresAuth) {
+      return true
+    }
+
+    if (!user) {
+      return false
+    }
+
+    if (isAdmin) {
+      return true
+    }
+
+    return Boolean(roleName && item.allowedRoles?.includes(roleName))
+  })
+
   return (
     <aside
       className={cn(
@@ -42,7 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}
