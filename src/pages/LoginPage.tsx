@@ -1,6 +1,6 @@
 import { ArrowRight, LockKeyhole } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -127,13 +127,6 @@ export function LoginPage() {
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </form>
-
-        <Link
-          to="/"
-          className="mt-6 inline-flex text-sm font-medium text-emerald-700 hover:text-emerald-800"
-        >
-          Ana sayfaya dön
-        </Link>
       </section>
     </main>
   )

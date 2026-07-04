@@ -1,12 +1,7 @@
-import { Activity, Home, LayoutDashboard, LogIn } from 'lucide-react'
+import { Activity, LayoutDashboard, LogIn } from 'lucide-react'
 import type { NavigationItem } from '../types/navigation'
 
 export const navItems: NavigationItem[] = [
-  {
-    label: 'Ana Sayfa',
-    href: '/',
-    icon: Home,
-  },
   {
     label: 'Dashboard',
     href: '/dashboard',

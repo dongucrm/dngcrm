@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '../layouts/AppLayout'
 import { DashboardPage } from '../pages/DashboardPage'
 import { HealthPage } from '../pages/HealthPage'
-import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleBasedRoute } from './RoleBasedRoute'
@@ -10,8 +9,9 @@ import { RoleBasedRoute } from './RoleBasedRoute'
 export function AppRoutes() {
   return (
     <Routes>
+      <Route index element={<Navigate to="/login" replace />} />
+
       <Route element={<AppLayout />}>
-        <Route index element={<HomePage />} />
         <Route
           path="dashboard"
           element={
@@ -34,7 +34,7 @@ export function AppRoutes() {
         />
       </Route>
       <Route path="login" element={<LoginPage />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }

@@ -3,6 +3,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -133,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const isManualLoginRef = useRef(false)
 
   const clearAuthState = useCallback(() => {
     setSession(null)
@@ -193,12 +195,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!isActive) {
         return
       }
 
-      void applySession(nextSession)
+      if (event === 'INITIAL_SESSION') {
+        return
+      }
+
+      if (event === 'SIGNED_IN' && isManualLoginRef.current) {
+        return
+      }
+
+      window.setTimeout(() => {
+        if (isActive) {
+          void applySession(nextSession)
+        }
+      }, 0)
     })
 
     return () => {
@@ -211,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       setLoading(true)
       setError(null)
+      isManualLoginRef.current = true
 
       const { data, error: signInError } =
         await supabase.auth.signInWithPassword({
@@ -221,6 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signInError) {
         const message = getErrorMessage(signInError)
 
+        isManualLoginRef.current = false
         clearAuthState()
         setError(message)
         setLoading(false)
@@ -234,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data.session || !data.user) {
         const message = authErrorMessages.sessionLoadFailed
 
+        isManualLoginRef.current = false
         clearAuthState()
         setError(message)
         setLoading(false)
@@ -251,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user)
         setProfile(authProfile.profile)
         setRole(authProfile.role)
+        isManualLoginRef.current = false
         setLoading(false)
 
         return {
@@ -259,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (profileError) {
         const message = getErrorMessage(profileError)
 
+        isManualLoginRef.current = false
         clearAuthState()
         setError(message)
         setLoading(false)
