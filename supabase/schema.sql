@@ -7,6 +7,7 @@
 --
 -- Notlar:
 -- - Bu dosya ilk kurulum icin idempotent olacak sekilde hazirlandi.
+-- - Bu dosya seed verisi eklemez; ornek veriler icin supabase/seed.sql dosyasini calistirin.
 -- - RLS tum tablolarda aktiftir.
 -- - Admin rolu tum kayitlari yonetebilir.
 -- - satis_personeli rolu kendisine atanmis leadleri ve gorevleri gorebilir.
@@ -463,64 +464,5 @@ for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
-
-insert into public.roles (name, description)
-values
-  ('admin', 'Sistem yoneticisi'),
-  ('satis_personeli', 'Satis personeli')
-on conflict (name) do update
-set description = excluded.description;
-
-insert into public.programs (name, type, description, price, quota)
-select v.name, v.type, v.description, v.price, v.quota
-from (
-  values
-    ('Orion Kamp', 'kamp', 'Cocuklar icin bilim, teknoloji ve kesif kampi.', 0::numeric, 25),
-    ('Dron Atölyesi', 'atolye', 'Dron teknolojileri ve temel ucus prensipleri atölyesi.', 0::numeric, 16),
-    ('Python Eğitimi', 'egitim', 'Python ile programlamaya giris egitimi.', 0::numeric, 20),
-    ('Robotik Kodlama', 'egitim', 'Robotik ve blok tabanli kodlama egitimi.', 0::numeric, 18),
-    ('3D Tasarım', 'atolye', '3D modelleme ve tasarim atölyesi.', 0::numeric, 15)
-) as v(name, type, description, price, quota)
-where not exists (
-  select 1
-  from public.programs p
-  where p.name = v.name
-);
-
-insert into public.whatsapp_templates (title, message, category)
-select v.title, v.message, v.category
-from (
-  values
-    (
-      'İlk İletişim',
-      'Merhaba {{veli_adi}}, Döngü CRM üzerinden başvurunuz bize ulaştı. Size en kısa sürede detaylı bilgi vermek isteriz.',
-      'lead'
-    ),
-    (
-      'Görüşme Hatırlatma',
-      'Merhaba {{veli_adi}}, {{program_adi}} hakkında planladığımız görüşmeyi hatırlatmak isteriz. Uygun olduğunuzda bizimle iletişime geçebilirsiniz.',
-      'arama'
-    ),
-    (
-      'Kayıt Bilgilendirme',
-      'Merhaba {{veli_adi}}, {{ogrenci_adi}} için {{program_adi}} ön kayıt süreci başlatılmıştır. Detaylar için bize ulaşabilirsiniz.',
-      'kayit'
-    ),
-    (
-      'Ödeme Hatırlatma',
-      'Merhaba {{veli_adi}}, {{program_adi}} kaydınız için ödeme hatırlatması yapmak isteriz. Yardımcı olmamız için bize yazabilirsiniz.',
-      'odeme'
-    ),
-    (
-      'Teşekkür Mesajı',
-      'Merhaba {{veli_adi}}, Döngü CRM ile iletişime geçtiğiniz için teşekkür ederiz. Size yardımcı olmaktan mutluluk duyarız.',
-      'genel'
-    )
-) as v(title, message, category)
-where not exists (
-  select 1
-  from public.whatsapp_templates t
-  where t.title = v.title
-);
 
 commit;
