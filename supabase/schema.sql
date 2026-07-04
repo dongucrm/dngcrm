@@ -222,6 +222,42 @@ as $$
   select coalesce(public.current_user_role_name() = 'satis_personeli', false);
 $$;
 
+create or replace function public.prevent_sales_lead_restricted_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_sales() and not public.is_admin() then
+    if old.full_name is distinct from new.full_name
+      or old.phone is distinct from new.phone
+      or old.email is distinct from new.email
+      or old.child_name is distinct from new.child_name
+      or old.child_age is distinct from new.child_age
+      or old.source is distinct from new.source
+      or old.interested_program_id is distinct from new.interested_program_id
+      or old.priority is distinct from new.priority
+      or old.probability is distinct from new.probability
+      or old.assigned_user_id is distinct from new.assigned_user_id
+      or old.last_contact_date is distinct from new.last_contact_date
+      or old.created_at is distinct from new.created_at
+    then
+      raise exception 'Satış personeli yalnızca lead durumu, notu ve sonraki arama tarihini güncelleyebilir.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_sales_lead_update on public.leads;
+
+create trigger protect_sales_lead_update
+before update on public.leads
+for each row
+execute function public.prevent_sales_lead_restricted_update();
+
 create index if not exists idx_profiles_role_id on public.profiles(role_id);
 create index if not exists idx_profiles_is_active on public.profiles(is_active);
 
@@ -312,6 +348,7 @@ to authenticated;
 grant execute on function public.current_user_role_name() to authenticated;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_sales() to authenticated;
+grant execute on function public.prevent_sales_lead_restricted_update() to authenticated;
 
 drop policy if exists "admins_manage_roles" on public.roles;
 create policy "admins_manage_roles"
@@ -376,6 +413,30 @@ using (
   and assigned_user_id = auth.uid()
 );
 
+drop policy if exists "sales_insert_own_leads" on public.leads;
+create policy "sales_insert_own_leads"
+on public.leads
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and assigned_user_id = auth.uid()
+);
+
+drop policy if exists "sales_update_assigned_lead_followup" on public.leads;
+create policy "sales_update_assigned_lead_followup"
+on public.leads
+for update
+to authenticated
+using (
+  public.is_sales()
+  and assigned_user_id = auth.uid()
+)
+with check (
+  public.is_sales()
+  and assigned_user_id = auth.uid()
+);
+
 drop policy if exists "admins_manage_parents" on public.parents;
 create policy "admins_manage_parents"
 on public.parents
@@ -416,6 +477,32 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+drop policy if exists "sales_insert_assigned_lead_call_logs" on public.call_logs;
+create policy "sales_insert_assigned_lead_call_logs"
+on public.call_logs
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and user_id = auth.uid()
+  and exists (
+    select 1
+    from public.leads l
+    where l.id = lead_id
+      and l.assigned_user_id = auth.uid()
+  )
+);
+
+drop policy if exists "sales_read_own_call_logs" on public.call_logs;
+create policy "sales_read_own_call_logs"
+on public.call_logs
+for select
+to authenticated
+using (
+  public.is_sales()
+  and user_id = auth.uid()
+);
+
 drop policy if exists "admins_manage_tasks" on public.tasks;
 create policy "admins_manage_tasks"
 on public.tasks
@@ -432,6 +519,22 @@ to authenticated
 using (
   public.is_sales()
   and assigned_user_id = auth.uid()
+);
+
+drop policy if exists "sales_insert_assigned_lead_tasks" on public.tasks;
+create policy "sales_insert_assigned_lead_tasks"
+on public.tasks
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and assigned_user_id = auth.uid()
+  and exists (
+    select 1
+    from public.leads l
+    where l.id = related_lead_id
+      and l.assigned_user_id = auth.uid()
+  )
 );
 
 drop policy if exists "admins_manage_whatsapp_templates" on public.whatsapp_templates;

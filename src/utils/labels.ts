@@ -23,10 +23,13 @@ export const leadStatusLabels: Record<LeadStatus, string> = {
   aranacak: 'Aranacak',
   arandi: 'Arandı',
   ulasilamadi: 'Ulaşılamadı',
-  takipte: 'Takipte',
-  teklif_verildi: 'Teklif Verildi',
+  bilgi_verildi: 'Bilgi Verildi',
+  deneme_dersine_davet: 'Deneme Dersine Davet',
+  deneme_dersine_katildi: 'Deneme Dersine Katıldı',
+  kayit_dusunuyor: 'Kayıt Düşünüyor',
+  odeme_bekleniyor: 'Ödeme Bekleniyor',
   kayit_oldu: 'Kayıt Oldu',
-  kaybedildi: 'Kaybedildi',
+  vazgecti: 'Vazgeçti',
 }
 
 export const leadPriorityLabels: Record<LeadPriority, string> = {
