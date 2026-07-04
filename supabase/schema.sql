@@ -240,10 +240,9 @@ begin
       or old.priority is distinct from new.priority
       or old.probability is distinct from new.probability
       or old.assigned_user_id is distinct from new.assigned_user_id
-      or old.last_contact_date is distinct from new.last_contact_date
       or old.created_at is distinct from new.created_at
     then
-      raise exception 'Satış personeli yalnızca lead durumu, notu ve sonraki arama tarihini güncelleyebilir.';
+      raise exception 'Satış personeli yalnızca lead durumu, notu, son görüşme tarihi ve sonraki arama tarihini güncelleyebilir.';
     end if;
   end if;
 
@@ -494,13 +493,45 @@ with check (
 );
 
 drop policy if exists "sales_read_own_call_logs" on public.call_logs;
-create policy "sales_read_own_call_logs"
+drop policy if exists "sales_read_assigned_lead_call_logs" on public.call_logs;
+create policy "sales_read_assigned_lead_call_logs"
 on public.call_logs
 for select
 to authenticated
 using (
   public.is_sales()
+  and (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.leads l
+      where l.id = lead_id
+        and l.assigned_user_id = auth.uid()
+    )
+  )
+);
+
+drop policy if exists "sales_update_own_call_logs" on public.call_logs;
+create policy "sales_update_own_call_logs"
+on public.call_logs
+for update
+to authenticated
+using (
+  public.is_sales()
   and user_id = auth.uid()
+)
+with check (
+  public.is_sales()
+  and user_id = auth.uid()
+  and (
+    lead_id is null
+    or exists (
+      select 1
+      from public.leads l
+      where l.id = lead_id
+        and l.assigned_user_id = auth.uid()
+    )
+  )
 );
 
 drop policy if exists "admins_manage_tasks" on public.tasks;

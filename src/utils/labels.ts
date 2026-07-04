@@ -79,7 +79,11 @@ export const callStatusLabels: Record<CallStatus, string> = {
   aranacak: 'Aranacak',
   arandi: 'Arandı',
   ulasilamadi: 'Ulaşılamadı',
-  mesgul: 'Meşgul',
-  geri_donulecek: 'Geri Dönülecek',
+  bilgi_verildi: 'Bilgi Verildi',
+  tekrar_aranacak: 'Tekrar Aranacak',
+  deneme_dersine_davet: 'Deneme Dersine Davet',
+  kayit_dusunuyor: 'Kayıt Düşünüyor',
+  odeme_bekleniyor: 'Ödeme Bekleniyor',
   kayit_oldu: 'Kayıt Oldu',
+  vazgecti: 'Vazgeçti',
 }

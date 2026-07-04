@@ -52,9 +52,13 @@ export type CallStatus =
   | 'aranacak'
   | 'arandi'
   | 'ulasilamadi'
-  | 'mesgul'
-  | 'geri_donulecek'
+  | 'bilgi_verildi'
+  | 'tekrar_aranacak'
+  | 'deneme_dersine_davet'
+  | 'kayit_dusunuyor'
+  | 'odeme_bekleniyor'
   | 'kayit_oldu'
+  | 'vazgecti'
 
 export type Role = {
   id: DatabaseId

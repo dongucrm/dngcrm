@@ -1,19 +1,19 @@
 import { ArrowLeft, MessageCircle } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { CallHistorySection } from '../features/calls/components/CallHistorySection'
 import { LeadPriorityBadge, LeadStatusBadge } from '../features/leads/LeadStatusBadge'
 import { useLeadDetail } from '../features/leads/useLeadDetail'
 import {
-  formatNullableDateTime,
-  formatPhoneForDisplay,
   getLeadAssignee,
   getLeadProgram,
-  getWhatsAppUrl,
 } from '../features/leads/utils'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { formatNullableDateTime } from '../utils/date'
 import {
   leadProbabilityLabels,
   leadStatusLabels,
 } from '../utils/labels'
+import { formatPhoneForDisplay, getWhatsAppUrl } from '../utils/phone'
 
 function DetailField({
   label,
@@ -148,6 +148,8 @@ export function LeadDetailPage() {
           {lead.notes || '-'}
         </p>
       </section>
+
+      <CallHistorySection leadId={lead.id} />
     </div>
   )
 }

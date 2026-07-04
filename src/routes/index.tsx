@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { menuItems, moduleMenuItems } from '../config/menu'
 import { AppLayout } from '../layouts/AppLayout'
+import { CallsPage } from '../pages/CallsPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { HealthPage } from '../pages/HealthPage'
 import { LeadDetailPage } from '../pages/LeadDetailPage'
@@ -12,7 +13,10 @@ import { RoleBasedRoute } from './RoleBasedRoute'
 
 const dashboardMenuItem = menuItems.find((item) => item.id === 'dashboard')
 const leadsMenuItem = menuItems.find((item) => item.id === 'leads')
-const placeholderMenuItems = moduleMenuItems.filter((item) => item.id !== 'leads')
+const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
+const placeholderMenuItems = moduleMenuItems.filter(
+  (item) => item.id !== 'leads' && item.id !== 'call-list',
+)
 
 function getRoutePath(path: string) {
   return path.replace(/^\//, '')
@@ -59,6 +63,18 @@ export function AppRoutes() {
               }
             />
           </>
+        ) : null}
+        {callsMenuItem ? (
+          <Route
+            path={getRoutePath(callsMenuItem.path)}
+            element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={callsMenuItem.routeRoles}>
+                  <CallsPage />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            }
+          />
         ) : null}
         {placeholderMenuItems.map((item) => (
           <Route

@@ -56,7 +56,7 @@ function getLeadStatusFromCallStatus(callStatus: string): LeadStatus | null {
     return callStatus as LeadStatus
   }
 
-  if (callStatus === 'mesgul' || callStatus === 'geri_donulecek') {
+  if (callStatus === 'tekrar_aranacak') {
     return 'aranacak'
   }
 
