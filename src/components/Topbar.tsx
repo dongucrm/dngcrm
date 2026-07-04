@@ -56,7 +56,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             <UserRound className="h-5 w-5" aria-hidden="true" />
           </span>
 
-          <div className="hidden min-w-0 sm:block">
+          <div className="min-w-0 max-w-32 sm:max-w-52">
             <p className="truncate text-sm font-semibold text-neutral-900">
               {displayName}
             </p>

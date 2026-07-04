@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { menuItems } from '../config/menu'
 import { useAuth } from '../hooks/useAuth'
-import { navItems } from '../routes/navigation'
 import { cn } from '../utils/cn'
 
 type SidebarProps = {
@@ -10,36 +10,28 @@ type SidebarProps = {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { isAdmin, roleName, user } = useAuth()
-  const visibleNavItems = navItems.filter((item) => {
-    if (item.hideWhenAuthenticated && user) {
-      return false
-    }
-
-    if (!item.requiresAuth) {
-      return true
-    }
-
-    if (!user) {
-      return false
-    }
-
+  const { isAdmin, roleName } = useAuth()
+  const visibleNavItems = menuItems.filter((item) => {
     if (isAdmin) {
       return true
     }
 
-    return Boolean(roleName && item.allowedRoles?.includes(roleName))
+    return Boolean(roleName && item.visibleRoles.includes(roleName))
   })
 
   return (
     <aside
       className={cn(
-        'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-neutral-200 bg-white transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-neutral-200 bg-white transition-transform duration-200 lg:translate-x-0',
         isOpen ? 'translate-x-0' : '-translate-x-full',
       )}
     >
       <div className="flex h-16 items-center justify-between border-b border-neutral-200 px-5">
-        <NavLink to="/" className="flex items-center gap-3" onClick={onClose}>
+        <NavLink
+          to="/dashboard"
+          className="flex items-center gap-3"
+          onClick={onClose}
+        >
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white">
             D
           </span>
@@ -63,12 +55,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {visibleNavItems.map((item) => (
           <NavLink
-            key={item.href}
-            to={item.href}
-            end={item.href === '/'}
+            key={item.id}
+            to={item.path}
+            end
             className={({ isActive }) =>
               cn(
                 'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
