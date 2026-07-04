@@ -1,4 +1,4 @@
-import { MessageCircle, PhoneCall } from 'lucide-react'
+import { ListChecks, MessageCircle, PhoneCall } from 'lucide-react'
 import { formatNullableDateTime } from '../../../utils/date'
 import { callStatusLabels } from '../../../utils/labels'
 import {
@@ -11,9 +11,14 @@ import type { CallTargetRecord } from '../types'
 type CallLogCardProps = {
   target: CallTargetRecord
   onAddCall: (target: CallTargetRecord) => void
+  onCreateTask: (target: CallTargetRecord) => void
 }
 
-export function CallLogCard({ onAddCall, target }: CallLogCardProps) {
+export function CallLogCard({
+  onAddCall,
+  onCreateTask,
+  target,
+}: CallLogCardProps) {
   const program = getCallTargetProgram(target)
   const whatsappUrl = getWhatsAppUrl(target.phone)
 
@@ -60,7 +65,7 @@ export function CallLogCard({ onAddCall, target }: CallLogCardProps) {
         </div>
       </dl>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
         <a
           href={whatsappUrl ?? undefined}
           target="_blank"
@@ -78,6 +83,14 @@ export function CallLogCard({ onAddCall, target }: CallLogCardProps) {
         >
           <PhoneCall className="h-4 w-4" aria-hidden="true" />
           Arama Kaydı
+        </button>
+        <button
+          type="button"
+          onClick={() => onCreateTask(target)}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+        >
+          <ListChecks className="h-4 w-4" aria-hidden="true" />
+          GÃ¶rev
         </button>
       </div>
     </article>

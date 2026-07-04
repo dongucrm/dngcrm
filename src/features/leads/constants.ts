@@ -42,7 +42,6 @@ export const callStatusOptions: CallStatus[] = [
 
 export const taskStatusOptions: TaskStatus[] = [
   'bekliyor',
-  'devam_ediyor',
   'tamamlandi',
   'iptal',
 ]

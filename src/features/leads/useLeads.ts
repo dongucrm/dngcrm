@@ -381,6 +381,7 @@ export function useLeads(filters: LeadFilters) {
         description: cleanText(values.description),
         related_lead_id: lead.id,
         assigned_user_id: assignedUserId,
+        created_by: user?.id ?? null,
         due_date: dueDate ?? null,
         status: values.status as TaskStatus,
         priority: values.priority as LeadPriority,

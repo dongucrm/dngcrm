@@ -45,7 +45,6 @@ export type PaymentMethod =
   | 'diger'
 export type TaskStatus =
   | 'bekliyor'
-  | 'devam_ediyor'
   | 'tamamlandi'
   | 'iptal'
 export type CallStatus =
@@ -179,6 +178,7 @@ export type Task = {
   related_lead_id: DatabaseId | null
   related_parent_id: DatabaseId | null
   assigned_user_id: DatabaseId | null
+  created_by: DatabaseId | null
   due_date: Timestamp | null
   status: TaskStatus | null
   priority: LeadPriority | null
@@ -279,6 +279,7 @@ export type TaskFormData = {
   related_lead_id?: DatabaseId
   related_parent_id?: DatabaseId
   assigned_user_id?: DatabaseId
+  created_by?: DatabaseId
   due_date?: Timestamp
   status: TaskStatus
   priority: LeadPriority

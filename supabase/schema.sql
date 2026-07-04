@@ -135,6 +135,7 @@ create table if not exists public.tasks (
   related_lead_id uuid references public.leads(id),
   related_parent_id uuid references public.parents(id),
   assigned_user_id uuid references public.profiles(id),
+  created_by uuid references public.profiles(id),
   due_date timestamptz,
   status text default 'bekliyor',
   priority text default 'orta',
@@ -257,6 +258,52 @@ before update on public.leads
 for each row
 execute function public.prevent_sales_lead_restricted_update();
 
+create or replace function public.prevent_sales_task_restricted_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if public.is_sales() and not public.is_admin() then
+    if old.assigned_user_id is distinct from new.assigned_user_id
+      or old.created_by is distinct from new.created_by
+    then
+      raise exception 'Satis personeli gorev atamasini veya olusturan kullaniciyi degistiremez.';
+    end if;
+
+    if old.created_by = auth.uid() then
+      return new;
+    end if;
+
+    if old.assigned_user_id = auth.uid() then
+      if new.status = 'tamamlandi'
+        and old.title is not distinct from new.title
+        and old.description is not distinct from new.description
+        and old.related_lead_id is not distinct from new.related_lead_id
+        and old.related_parent_id is not distinct from new.related_parent_id
+        and old.due_date is not distinct from new.due_date
+        and old.priority is not distinct from new.priority
+        and old.created_at is not distinct from new.created_at
+      then
+        return new;
+      end if;
+    end if;
+
+    raise exception 'Satis personeli yalnizca kendi olusturdugu gorevleri duzenleyebilir veya kendisine atanmis gorevi tamamlandi yapabilir.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_sales_task_update on public.tasks;
+
+create trigger protect_sales_task_update
+before update on public.tasks
+for each row
+execute function public.prevent_sales_task_restricted_update();
+
 create index if not exists idx_profiles_role_id on public.profiles(role_id);
 create index if not exists idx_profiles_is_active on public.profiles(is_active);
 
@@ -297,6 +344,7 @@ create index if not exists idx_call_logs_next_call_date on public.call_logs(next
 create index if not exists idx_tasks_related_lead_id on public.tasks(related_lead_id);
 create index if not exists idx_tasks_related_parent_id on public.tasks(related_parent_id);
 create index if not exists idx_tasks_assigned_user_id on public.tasks(assigned_user_id);
+create index if not exists idx_tasks_created_by on public.tasks(created_by);
 create index if not exists idx_tasks_status on public.tasks(status);
 create index if not exists idx_tasks_priority on public.tasks(priority);
 create index if not exists idx_tasks_due_date on public.tasks(due_date);
@@ -348,6 +396,7 @@ grant execute on function public.current_user_role_name() to authenticated;
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_sales() to authenticated;
 grant execute on function public.prevent_sales_lead_restricted_update() to authenticated;
+grant execute on function public.prevent_sales_task_restricted_update() to authenticated;
 
 drop policy if exists "admins_manage_roles" on public.roles;
 create policy "admins_manage_roles"
@@ -535,6 +584,12 @@ with check (
 );
 
 drop policy if exists "admins_manage_tasks" on public.tasks;
+drop policy if exists "sales_read_assigned_tasks" on public.tasks;
+drop policy if exists "sales_insert_assigned_lead_tasks" on public.tasks;
+drop policy if exists "sales_insert_own_tasks" on public.tasks;
+drop policy if exists "sales_update_own_tasks" on public.tasks;
+drop policy if exists "sales_update_own_or_assigned_tasks" on public.tasks;
+
 create policy "admins_manage_tasks"
 on public.tasks
 for all
@@ -542,7 +597,6 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-drop policy if exists "sales_read_assigned_tasks" on public.tasks;
 create policy "sales_read_assigned_tasks"
 on public.tasks
 for select
@@ -552,19 +606,32 @@ using (
   and assigned_user_id = auth.uid()
 );
 
-drop policy if exists "sales_insert_assigned_lead_tasks" on public.tasks;
-create policy "sales_insert_assigned_lead_tasks"
+create policy "sales_insert_own_tasks"
 on public.tasks
 for insert
 to authenticated
 with check (
   public.is_sales()
   and assigned_user_id = auth.uid()
-  and exists (
-    select 1
-    from public.leads l
-    where l.id = related_lead_id
-      and l.assigned_user_id = auth.uid()
+  and created_by = auth.uid()
+);
+
+create policy "sales_update_own_or_assigned_tasks"
+on public.tasks
+for update
+to authenticated
+using (
+  public.is_sales()
+  and (
+    assigned_user_id = auth.uid()
+    or created_by = auth.uid()
+  )
+)
+with check (
+  public.is_sales()
+  and (
+    assigned_user_id = auth.uid()
+    or created_by = auth.uid()
   )
 );
 

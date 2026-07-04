@@ -8,14 +8,17 @@ import { LeadDetailPage } from '../pages/LeadDetailPage'
 import { LeadsPage } from '../pages/LeadsPage'
 import { LoginPage } from '../pages/LoginPage'
 import { ModulePlaceholderPage } from '../pages/ModulePlaceholderPage'
+import { TasksPage } from '../pages/TasksPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleBasedRoute } from './RoleBasedRoute'
 
 const dashboardMenuItem = menuItems.find((item) => item.id === 'dashboard')
 const leadsMenuItem = menuItems.find((item) => item.id === 'leads')
 const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
+const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
 const placeholderMenuItems = moduleMenuItems.filter(
-  (item) => item.id !== 'leads' && item.id !== 'call-list',
+  (item) =>
+    item.id !== 'leads' && item.id !== 'call-list' && item.id !== 'tasks',
 )
 
 function getRoutePath(path: string) {
@@ -71,6 +74,18 @@ export function AppRoutes() {
               <ProtectedRoute>
                 <RoleBasedRoute allowedRoles={callsMenuItem.routeRoles}>
                   <CallsPage />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            }
+          />
+        ) : null}
+        {tasksMenuItem ? (
+          <Route
+            path={getRoutePath(tasksMenuItem.path)}
+            element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={tasksMenuItem.routeRoles}>
+                  <TasksPage />
                 </RoleBasedRoute>
               </ProtectedRoute>
             }

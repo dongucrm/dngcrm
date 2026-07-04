@@ -43,7 +43,6 @@ export const leadProbabilityOptions: LeadProbability[] = [
 
 export const taskStatusOptions: TaskStatus[] = [
   'bekliyor',
-  'devam_ediyor',
   'tamamlandi',
   'iptal',
 ]

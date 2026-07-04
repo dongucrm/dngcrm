@@ -43,6 +43,14 @@ Call logs RLS guncellemesi icin:
 
 Bu migration tablo silmez ve veri kaybi olusturmaz. Sadece `call_logs` icin gerekli index, RLS ve policy guncellemelerini uygular.
 
+Tasks / gorev RLS guncellemesi icin:
+
+1. `supabase/migrations/016_tasks_rls_update.sql` dosyasinin tamamini kopyalayin.
+2. Supabase SQL Editor icinde yeni bir query acin.
+3. Icerigi yapistirip Run butonuna basin.
+
+Bu migration tablo silmez ve veri kaybi olusturmaz. `tasks` tablosuna `created_by` alanini ekler, gorev indexlerini tamamlar ve admin / satis personeli RLS kurallarini gunceller.
+
 ## 6. Project URL ve Publishable Key Alma
 
 1. Supabase Dashboard icinde Project Settings ekranina girin.

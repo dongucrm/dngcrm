@@ -468,6 +468,7 @@ export async function createTaskForLead(
 
   const { error } = await supabase.from('tasks').insert({
     assigned_user_id: lead.assigned_user_id ?? auth.userId,
+    created_by: auth.userId,
     description: cleanText(values.description),
     due_date: fromDateTimeLocalValue(values.due_date) ?? null,
     priority: values.priority as LeadPriority,

@@ -6,7 +6,6 @@ import { CallLogForm } from '../features/calls/components/CallLogForm'
 import { CallLogsTable } from '../features/calls/components/CallLogsTable'
 import { emptyCallFilters } from '../features/calls/constants'
 import {
-  createTaskForLead,
   fetchCallReferences,
   fetchCallTargets,
   saveCallLog,
@@ -17,9 +16,16 @@ import type {
   CallLogRecord,
   CallReferences,
   CallTargetRecord,
-  CallTaskFormValues,
 } from '../features/calls/types'
-import { LeadQuickActionModal } from '../features/leads/LeadQuickActionModal'
+import { TaskForm } from '../features/tasks/components/TaskForm'
+import {
+  createTaskValuesFromLead,
+  saveTask,
+} from '../features/tasks/services/taskService'
+import type {
+  TaskFormValues,
+  TaskReferences,
+} from '../features/tasks/types'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -58,6 +64,14 @@ export function CallsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const taskReferences = useMemo<TaskReferences>(
+    () => ({
+      leads: references.leads,
+      parents: references.parents,
+      profiles: references.profiles,
+    }),
+    [references],
+  )
 
   const loadReferences = useCallback(async () => {
     const result = await fetchCallReferences(authContext)
@@ -124,26 +138,24 @@ export function CallsPage() {
     return result
   }
 
-  async function handleCreateTask(values: CallTaskFormValues) {
+  async function handleCreateTask(values: TaskFormValues) {
     if (!taskTarget) {
       return {
-        success: false,
         error: 'Görev için lead seçilemedi.',
       }
     }
 
     setSaving(true)
-    const result = await createTaskForLead(taskTarget, values, authContext)
+    const result = await saveTask(values, authContext)
     setSaving(false)
 
     if (result.error) {
-      return {
-        success: false,
-        error: result.error,
-      }
+      return result
     }
 
-    return { success: true }
+    setTaskTarget(null)
+
+    return result
   }
 
   return (
@@ -225,6 +237,7 @@ export function CallsPage() {
                 key={target.id}
                 target={target}
                 onAddCall={openCreateForm}
+                onCreateTask={setTaskTarget}
               />
             ))}
           </section>
@@ -243,15 +256,23 @@ export function CallsPage() {
         onSubmit={handleSaveCallLog}
       />
 
-      <LeadQuickActionModal
-        action={taskTarget ? { lead: taskTarget, type: 'task' } : null}
+      <TaskForm
+        authUserId={user?.id ?? null}
+        editingTask={null}
+        initialValues={
+          taskTarget
+            ? createTaskValuesFromLead(
+                taskTarget.id,
+                taskTarget.assigned_user_id ?? user?.id,
+              )
+            : undefined
+        }
+        isAdmin={isAdmin}
+        isOpen={Boolean(taskTarget)}
+        references={taskReferences}
         saving={saving}
         onClose={() => setTaskTarget(null)}
-        onCreateCallLog={async () => ({
-          success: false,
-          error: 'Bu ekranda arama kaydı formunu kullanın.',
-        })}
-        onCreateTask={handleCreateTask}
+        onSubmit={handleCreateTask}
       />
     </div>
   )

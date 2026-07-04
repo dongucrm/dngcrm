@@ -1,8 +1,18 @@
-import { AlertCircle, PhoneCall, TrendingUp, UserX } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  ClipboardList,
+  PhoneCall,
+  TrendingUp,
+  UserX,
+} from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { StatCard } from '../components/StatCard'
 import { fetchDashboardCallMetrics } from '../features/calls/services/callLogService'
 import type { CallDashboardMetrics } from '../features/calls/types'
+import { TodayTasksWidget } from '../features/tasks/components/TodayTasksWidget'
+import { fetchTaskDashboardMetrics } from '../features/tasks/services/taskService'
+import type { TaskDashboardMetrics } from '../features/tasks/types'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -11,6 +21,14 @@ const emptyMetrics: CallDashboardMetrics = {
   overdueCount: 0,
   todayCount: 0,
   unreachableCount: 0,
+}
+
+const emptyTaskMetrics: TaskDashboardMetrics = {
+  completedCount: 0,
+  highPriorityCount: 0,
+  overdueCount: 0,
+  pendingCount: 0,
+  todayCount: 0,
 }
 
 export function DashboardPage() {
@@ -26,6 +44,7 @@ export function DashboardPage() {
     [isAdmin, isSales, user?.id],
   )
   const [metrics, setMetrics] = useState(emptyMetrics)
+  const [taskMetrics, setTaskMetrics] = useState(emptyTaskMetrics)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,13 +52,17 @@ export function DashboardPage() {
 
     async function loadMetrics() {
       setLoading(true)
-      const nextMetrics = await fetchDashboardCallMetrics(authContext)
+      const [nextMetrics, nextTaskMetrics] = await Promise.all([
+        fetchDashboardCallMetrics(authContext),
+        fetchTaskDashboardMetrics(authContext),
+      ])
 
       if (!isMounted) {
         return
       }
 
       setMetrics(nextMetrics)
+      setTaskMetrics(nextTaskMetrics)
       setLoading(false)
     }
 
@@ -77,6 +100,39 @@ export function DashboardPage() {
     },
   ]
 
+  const taskStats = [
+    {
+      detail: 'Bugün tamamlanması gereken görevler',
+      icon: ClipboardList,
+      label: 'Bugünkü görevler',
+      value: String(taskMetrics.todayCount),
+    },
+    {
+      detail: 'Son tarihi geçmiş açık görevler',
+      icon: AlertCircle,
+      label: 'Geciken görevler',
+      value: String(taskMetrics.overdueCount),
+    },
+    {
+      detail: 'Bekliyor durumundaki görevler',
+      icon: PhoneCall,
+      label: 'Bekleyen görevler',
+      value: String(taskMetrics.pendingCount),
+    },
+    {
+      detail: 'Tamamlandı durumundaki görevler',
+      icon: CheckCircle2,
+      label: 'Tamamlanan görevler',
+      value: String(taskMetrics.completedCount),
+    },
+    {
+      detail: 'Yüksek öncelikli görevler',
+      icon: TrendingUp,
+      label: 'Yüksek öncelik',
+      value: String(taskMetrics.highPriorityCount),
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,11 +147,26 @@ export function DashboardPage() {
           Dashboard verileri yükleniyor...
         </div>
       ) : (
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.label} {...stat} />
-          ))}
-        </section>
+        <>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
+            ))}
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-neutral-950">
+              Görev Özeti
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              {taskStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </div>
+          </section>
+
+          <TodayTasksWidget />
+        </>
       )}
     </div>
   )

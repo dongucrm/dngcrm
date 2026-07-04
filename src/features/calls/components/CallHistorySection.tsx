@@ -1,6 +1,18 @@
-import { useEffect, useState } from 'react'
+import { ListChecks } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../../../hooks/useAuth'
 import { formatNullableDateTime } from '../../../utils/date'
 import { callStatusLabels } from '../../../utils/labels'
+import { TaskForm } from '../../tasks/components/TaskForm'
+import {
+  createTaskValuesFromLead,
+  fetchTaskReferences,
+  saveTask,
+} from '../../tasks/services/taskService'
+import type {
+  TaskFormValues,
+  TaskReferences,
+} from '../../tasks/types'
 import {
   fetchCallLogsForLead,
   getCallLogUser,
@@ -11,51 +23,98 @@ type CallHistorySectionProps = {
   leadId: string
 }
 
+const emptyTaskReferences: TaskReferences = {
+  leads: [],
+  parents: [],
+  profiles: [],
+}
+
 export function CallHistorySection({ leadId }: CallHistorySectionProps) {
+  const { isAdmin, isSales, user } = useAuth()
+  const auth = useMemo(
+    () => ({
+      isAdmin,
+      isSales,
+      userId: user?.id ?? null,
+    }),
+    [isAdmin, isSales, user?.id],
+  )
   const [logs, setLogs] = useState<CallLogRecord[]>([])
+  const [taskReferences, setTaskReferences] =
+    useState<TaskReferences>(emptyTaskReferences)
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let isMounted = true
+  const loadLogs = useCallback(async () => {
+    setLoading(true)
+    setError(null)
 
-    async function loadLogs() {
-      setLoading(true)
-      setError(null)
+    const result = await fetchCallLogsForLead(leadId)
 
-      const result = await fetchCallLogsForLead(leadId)
-
-      if (!isMounted) {
-        return
-      }
-
-      if (result.error) {
-        setLogs([])
-        setError(result.error)
-        setLoading(false)
-        return
-      }
-
-      setLogs(result.data ?? [])
+    if (result.error) {
+      setLogs([])
+      setError(result.error)
       setLoading(false)
+      return
+    }
+
+    setLogs(result.data ?? [])
+    setLoading(false)
+  }, [leadId])
+
+  useEffect(() => {
+    async function loadTaskReferences() {
+      const result = await fetchTaskReferences(auth)
+
+      if (result.data) {
+        setTaskReferences(result.data)
+      }
     }
 
     void loadLogs()
+    void loadTaskReferences()
+  }, [auth, loadLogs])
 
-    return () => {
-      isMounted = false
+  async function handleSaveTask(values: TaskFormValues) {
+    setSaving(true)
+    const result = await saveTask(values, auth)
+    setSaving(false)
+
+    if (result.error) {
+      return result
     }
-  }, [leadId])
+
+    setIsTaskFormOpen(false)
+    return result
+  }
+
+  const leadReference = taskReferences.leads.find((lead) => lead.id === leadId)
+  const initialTaskValues = createTaskValuesFromLead(
+    leadId,
+    leadReference?.assigned_user_id ?? user?.id,
+  )
 
   return (
     <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-base font-semibold text-neutral-950">
-          Görüşme Geçmişi
-        </h2>
-        <span className="rounded-lg bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700">
-          {logs.length} kayıt
-        </span>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-neutral-950">
+            Görüşme Geçmişi
+          </h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            {logs.length} kayıt
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsTaskFormOpen(true)}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+        >
+          <ListChecks className="h-4 w-4" aria-hidden="true" />
+          Görev Oluştur
+        </button>
       </div>
 
       {loading ? (
@@ -73,7 +132,7 @@ export function CallHistorySection({ leadId }: CallHistorySectionProps) {
       ) : (
         <div className="mt-4 divide-y divide-neutral-200">
           {logs.map((log) => {
-            const user = getCallLogUser(log)
+            const logUser = getCallLogUser(log)
 
             return (
               <article key={log.id} className="py-4 first:pt-0 last:pb-0">
@@ -89,7 +148,7 @@ export function CallHistorySection({ leadId }: CallHistorySectionProps) {
                     </p>
                   </div>
                   <p className="text-sm font-medium text-neutral-700">
-                    {user?.full_name ?? 'Personel yok'}
+                    {logUser?.full_name ?? 'Personel yok'}
                   </p>
                 </div>
                 <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
@@ -106,6 +165,18 @@ export function CallHistorySection({ leadId }: CallHistorySectionProps) {
           })}
         </div>
       )}
+
+      <TaskForm
+        authUserId={user?.id ?? null}
+        editingTask={null}
+        initialValues={initialTaskValues}
+        isAdmin={isAdmin}
+        isOpen={isTaskFormOpen}
+        references={taskReferences}
+        saving={saving}
+        onClose={() => setIsTaskFormOpen(false)}
+        onSubmit={handleSaveTask}
+      />
     </section>
   )
 }

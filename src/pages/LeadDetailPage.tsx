@@ -7,6 +7,7 @@ import {
   getLeadAssignee,
   getLeadProgram,
 } from '../features/leads/utils'
+import { LeadTasksSection } from '../features/tasks/components/LeadTasksSection'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
 import {
@@ -148,6 +149,8 @@ export function LeadDetailPage() {
           {lead.notes || '-'}
         </p>
       </section>
+
+      <LeadTasksSection leadId={lead.id} assignedUserId={lead.assigned_user_id} />
 
       <CallHistorySection leadId={lead.id} />
     </div>

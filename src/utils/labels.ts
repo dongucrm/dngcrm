@@ -70,7 +70,6 @@ export const paymentMethodLabels: Record<PaymentMethod, string> = {
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
   bekliyor: 'Bekliyor',
-  devam_ediyor: 'Devam Ediyor',
   tamamlandi: 'Tamamlandı',
   iptal: 'İptal',
 }

@@ -66,3 +66,26 @@ export function isPastDateTimeLocal(value: string) {
 
   return new Date(value).getTime() < Date.now()
 }
+
+export function isToday(value: string | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  const date = new Date(value)
+  const today = new Date()
+
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  )
+}
+
+export function isOverdue(value: string | null | undefined) {
+  if (!value) {
+    return false
+  }
+
+  return new Date(value).getTime() < Date.now()
+}
