@@ -31,14 +31,26 @@ Bu adim tablolar, indexler, trigger fonksiyonlari, RLS ve policy yapilarini olus
 
 Bu adim baslangic rolleri, ornek programlar, ornek WhatsApp sablonlari, ornek leadler, ornek veli ve ogrenci verileri ekler. Seed veriler gercek kisisel veri icermez.
 
-## 5. Project URL ve Publishable Key Alma
+## 5. Migration Dosyalarini Calistirma
+
+Mevcut veritabani uzerinde sonradan eklenen guvenli guncellemeler icin migration dosyalari kullanilir.
+
+Call logs RLS guncellemesi icin:
+
+1. `supabase/migrations/015_call_logs_rls_update.sql` dosyasinin tamamini kopyalayin.
+2. Supabase SQL Editor icinde yeni bir query acin.
+3. Icerigi yapistirip Run butonuna basin.
+
+Bu migration tablo silmez ve veri kaybi olusturmaz. Sadece `call_logs` icin gerekli index, RLS ve policy guncellemelerini uygular.
+
+## 6. Project URL ve Publishable Key Alma
 
 1. Supabase Dashboard icinde Project Settings ekranina girin.
 2. API Keys bolumunu acin.
 3. Project URL degerini kopyalayin.
 4. Publishable Key degerini kopyalayin.
 
-## 6. .env.local Dosyasina Ekleme
+## 7. .env.local Dosyasina Ekleme
 
 Proje kok dizininde `.env.local` dosyasi olusturun:
 
