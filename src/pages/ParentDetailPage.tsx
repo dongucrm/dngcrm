@@ -31,6 +31,17 @@ import type {
   ParentRecord,
   ParentReferences,
 } from '../features/parents/types'
+import { RegistrationForm } from '../features/registrations/components/RegistrationForm'
+import {
+  fetchRegistrationReferences,
+  saveRegistration,
+} from '../features/registrations/services/registrationService'
+import type {
+  RegistrationFormValues,
+  RegistrationRecord,
+  RegistrationReferences,
+  RegistrationSaveOptions,
+} from '../features/registrations/types'
 import { StudentForm } from '../features/students/components/StudentForm'
 import {
   fetchStudentReferences,
@@ -85,6 +96,13 @@ const emptyCallReferences: CallReferences = {
   profiles: [],
   programs: [],
   sources: [],
+}
+
+const emptyRegistrationReferences: RegistrationReferences = {
+  parents: [],
+  programs: [],
+  students: [],
+  whatsappTemplates: [],
 }
 
 function DetailField({
@@ -143,9 +161,12 @@ export function ParentDetailPage() {
     useState<TaskReferences>(emptyTaskReferences)
   const [callReferences, setCallReferences] =
     useState<CallReferences>(emptyCallReferences)
+  const [registrationReferences, setRegistrationReferences] =
+    useState<RegistrationReferences>(emptyRegistrationReferences)
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isParentFormOpen, setIsParentFormOpen] = useState(false)
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false)
+  const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false)
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [isCallFormOpen, setIsCallFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -177,12 +198,19 @@ export function ParentDetailPage() {
 
   useEffect(() => {
     async function loadReferences() {
-      const [parentResult, studentResult, taskResult, callResult] =
+      const [
+        parentResult,
+        studentResult,
+        taskResult,
+        callResult,
+        registrationResult,
+      ] =
         await Promise.all([
           fetchParentReferences(),
           fetchStudentReferences(),
           fetchTaskReferences(auth),
           fetchCallReferences(auth),
+          fetchRegistrationReferences(),
         ])
 
       if (parentResult.data) {
@@ -199,6 +227,10 @@ export function ParentDetailPage() {
 
       if (callResult.data) {
         setCallReferences(callResult.data)
+      }
+
+      if (registrationResult.data) {
+        setRegistrationReferences(registrationResult.data)
       }
     }
 
@@ -228,6 +260,28 @@ export function ParentDetailPage() {
   ) {
     setSaving(true)
     const result = await saveStudent(values, auth, editingStudent)
+    setSaving(false)
+
+    if (result.error) {
+      return result
+    }
+
+    await loadParent()
+    return result
+  }
+
+  async function handleSaveRegistration(
+    values: RegistrationFormValues,
+    editingRegistration?: RegistrationRecord | null,
+    options?: RegistrationSaveOptions,
+  ) {
+    setSaving(true)
+    const result = await saveRegistration(
+      values,
+      auth,
+      editingRegistration,
+      options,
+    )
     setSaving(false)
 
     if (result.error) {
@@ -442,7 +496,14 @@ export function ParentDetailPage() {
             <h2 className="text-base font-semibold text-neutral-950">
               Kayıtlar
             </h2>
-            <PlusCircle className="h-4 w-4 text-neutral-400" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setIsRegistrationFormOpen(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            >
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              Kayıt Oluştur
+            </button>
           </div>
           <div className="mt-4 space-y-3">
             {parent.registrations && parent.registrations.length > 0 ? (
@@ -451,9 +512,10 @@ export function ParentDetailPage() {
                 const student = normalizeRelation(registration.student)
 
                 return (
-                  <article
+                  <Link
                     key={registration.id}
-                    className="rounded-lg border border-neutral-200 p-3"
+                    to={`/registrations/${registration.id}`}
+                    className="block rounded-lg border border-neutral-200 p-3 hover:bg-neutral-50"
                   >
                     <p className="font-semibold text-neutral-950">
                       {program?.name ?? 'Program yok'}
@@ -464,7 +526,7 @@ export function ParentDetailPage() {
                         ? registrationStatusLabels[registration.status]
                         : '-'}
                     </p>
-                  </article>
+                  </Link>
                 )
               })
             ) : (
@@ -582,6 +644,20 @@ export function ParentDetailPage() {
         saving={saving}
         onClose={() => setIsStudentFormOpen(false)}
         onSubmit={handleSaveStudent}
+      />
+
+      <RegistrationForm
+        editingRegistration={null}
+        initialValues={{
+          parent_id: parent.id,
+          student_id: parent.students?.[0]?.id,
+        }}
+        isAdmin={isAdmin}
+        isOpen={isRegistrationFormOpen}
+        references={registrationReferences}
+        saving={saving}
+        onClose={() => setIsRegistrationFormOpen(false)}
+        onSubmit={handleSaveRegistration}
       />
 
       <TaskForm

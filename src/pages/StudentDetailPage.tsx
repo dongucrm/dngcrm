@@ -2,6 +2,17 @@ import { ArrowLeft, FilePlus2, NotebookPen, UserPen, UsersRound } from 'lucide-r
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { NotesSection } from '../features/notes/components/NotesSection'
+import { RegistrationForm } from '../features/registrations/components/RegistrationForm'
+import {
+  fetchRegistrationReferences,
+  saveRegistration,
+} from '../features/registrations/services/registrationService'
+import type {
+  RegistrationFormValues,
+  RegistrationRecord,
+  RegistrationReferences,
+  RegistrationSaveOptions,
+} from '../features/registrations/types'
 import { StudentForm } from '../features/students/components/StudentForm'
 import {
   fetchStudentDetail,
@@ -25,6 +36,13 @@ import {
 const emptyReferences: StudentReferences = {
   parents: [],
   programs: [],
+}
+
+const emptyRegistrationReferences: RegistrationReferences = {
+  parents: [],
+  programs: [],
+  students: [],
+  whatsappTemplates: [],
 }
 
 function DetailField({
@@ -76,7 +94,10 @@ export function StudentDetailPage() {
   const [student, setStudent] = useState<StudentRecord | null>(null)
   const [references, setReferences] =
     useState<StudentReferences>(emptyReferences)
+  const [registrationReferences, setRegistrationReferences] =
+    useState<RegistrationReferences>(emptyRegistrationReferences)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,10 +127,17 @@ export function StudentDetailPage() {
 
   useEffect(() => {
     async function loadReferences() {
-      const result = await fetchStudentReferences()
+      const [studentResult, registrationResult] = await Promise.all([
+        fetchStudentReferences(),
+        fetchRegistrationReferences(),
+      ])
 
-      if (result.data) {
-        setReferences(result.data)
+      if (studentResult.data) {
+        setReferences(studentResult.data)
+      }
+
+      if (registrationResult.data) {
+        setRegistrationReferences(registrationResult.data)
       }
     }
 
@@ -123,6 +151,28 @@ export function StudentDetailPage() {
   ) {
     setSaving(true)
     const result = await saveStudent(values, auth, editingStudent)
+    setSaving(false)
+
+    if (result.error) {
+      return result
+    }
+
+    await loadStudent()
+    return result
+  }
+
+  async function handleSaveRegistration(
+    values: RegistrationFormValues,
+    editingRegistration?: RegistrationRecord | null,
+    options?: RegistrationSaveOptions,
+  ) {
+    setSaving(true)
+    const result = await saveRegistration(
+      values,
+      auth,
+      editingRegistration,
+      options,
+    )
     setSaving(false)
 
     if (result.error) {
@@ -200,13 +250,14 @@ export function StudentDetailPage() {
               Veliye Git
             </Link>
           ) : null}
-          <Link
-            to={`/students/${student.id}`}
+          <button
+            type="button"
+            onClick={() => setIsRegistrationFormOpen(true)}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             <FilePlus2 className="h-4 w-4" aria-hidden="true" />
             Kayıt Oluştur
-          </Link>
+          </button>
           <a
             href="#student-notes"
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
@@ -253,9 +304,10 @@ export function StudentDetailPage() {
                 const program = normalizeRelation(registration.program)
 
                 return (
-                  <article
+                  <Link
                     key={registration.id}
-                    className="rounded-lg border border-neutral-200 p-3"
+                    to={`/registrations/${registration.id}`}
+                    className="block rounded-lg border border-neutral-200 p-3 hover:bg-neutral-50"
                   >
                     <p className="font-semibold text-neutral-950">
                       {program?.name ?? 'Program yok'}
@@ -266,7 +318,7 @@ export function StudentDetailPage() {
                         : '-'}{' '}
                       · {registration.registration_date ?? '-'}
                     </p>
-                  </article>
+                  </Link>
                 )
               })
             ) : (
@@ -326,6 +378,20 @@ export function StudentDetailPage() {
         saving={saving}
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleSaveStudent}
+      />
+
+      <RegistrationForm
+        editingRegistration={null}
+        initialValues={{
+          parent_id: student.parent_id ?? undefined,
+          student_id: student.id,
+        }}
+        isAdmin={isAdmin}
+        isOpen={isRegistrationFormOpen}
+        references={registrationReferences}
+        saving={saving}
+        onClose={() => setIsRegistrationFormOpen(false)}
+        onSubmit={handleSaveRegistration}
       />
     </div>
   )

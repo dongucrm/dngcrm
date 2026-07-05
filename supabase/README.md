@@ -59,6 +59,14 @@ Parents / students / notes RLS guncellemesi icin:
 
 Bu migration tablo silmez ve veri kaybi olusturmaz. `parents` ve `students` tablolarina `created_by` / `source_lead_id` alanlarini ekler, parent-student-note RLS kurallarini ve ilgili registration/payment okuma policylerini gunceller.
 
+Programs / registrations RLS guncellemesi icin:
+
+1. `supabase/migrations/018_programs_registrations_rls_update.sql` dosyasinin tamamini kopyalayin.
+2. Supabase SQL Editor icinde yeni bir query acin.
+3. Icerigi yapistirip Run butonuna basin.
+
+Bu migration tablo silmez ve veri kaybi olusturmaz. `programs.notes`, `registrations.created_by` ve `registrations.source_lead_id` alanlarini ekler; program, kayit ve ilgili not RLS kurallarini gunceller.
+
 ## 6. Project URL ve Publishable Key Alma
 
 1. Supabase Dashboard icinde Project Settings ekranina girin.

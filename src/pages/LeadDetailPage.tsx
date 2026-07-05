@@ -124,7 +124,9 @@ export function LeadDetailPage() {
       return { error: result.error }
     }
 
-    if (result.data) {
+    if (result.registrationId) {
+      navigate(`/registrations/${result.registrationId}`)
+    } else if (result.data) {
       navigate(`/parents/${result.data.id}`)
     }
 

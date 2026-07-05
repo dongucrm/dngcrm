@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  BookOpen,
   CheckCircle2,
   ClipboardList,
   GraduationCap,
@@ -14,6 +15,8 @@ import { fetchDashboardCallMetrics } from '../features/calls/services/callLogSer
 import type { CallDashboardMetrics } from '../features/calls/types'
 import { fetchParentDashboardMetrics } from '../features/parents/services/parentService'
 import type { ParentDashboardMetrics } from '../features/parents/types'
+import { fetchProgramDashboardMetrics } from '../features/programs/services/programService'
+import type { ProgramDashboardMetrics } from '../features/programs/types'
 import { TodayTasksWidget } from '../features/tasks/components/TodayTasksWidget'
 import { fetchTaskDashboardMetrics } from '../features/tasks/services/taskService'
 import type { TaskDashboardMetrics } from '../features/tasks/types'
@@ -43,6 +46,27 @@ const emptyParentMetrics: ParentDashboardMetrics = {
   totalStudents: 0,
 }
 
+const emptyProgramMetrics: ProgramDashboardMetrics = {
+  activePrograms: 0,
+  cancelledRegistrations: 0,
+  confirmedRegistrations: 0,
+  highestFillProgram: null,
+  preRegistrations: 0,
+  programsNearCapacity: [],
+  recentRegistrations: [],
+  registrationsThisMonth: 0,
+  totalPrograms: 0,
+  totalRegistrations: 0,
+}
+
+function normalizeRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value ?? null
+}
+
 export function DashboardPage() {
   usePageTitle('Dashboard')
 
@@ -58,6 +82,7 @@ export function DashboardPage() {
   const [metrics, setMetrics] = useState(emptyMetrics)
   const [taskMetrics, setTaskMetrics] = useState(emptyTaskMetrics)
   const [parentMetrics, setParentMetrics] = useState(emptyParentMetrics)
+  const [programMetrics, setProgramMetrics] = useState(emptyProgramMetrics)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,10 +90,16 @@ export function DashboardPage() {
 
     async function loadMetrics() {
       setLoading(true)
-      const [nextMetrics, nextTaskMetrics, nextParentMetrics] = await Promise.all([
+      const [
+        nextMetrics,
+        nextTaskMetrics,
+        nextParentMetrics,
+        nextProgramMetrics,
+      ] = await Promise.all([
         fetchDashboardCallMetrics(authContext),
         fetchTaskDashboardMetrics(authContext),
         fetchParentDashboardMetrics(),
+        fetchProgramDashboardMetrics(),
       ])
 
       if (!isMounted) {
@@ -78,6 +109,7 @@ export function DashboardPage() {
       setMetrics(nextMetrics)
       setTaskMetrics(nextTaskMetrics)
       setParentMetrics(nextParentMetrics)
+      setProgramMetrics(nextProgramMetrics)
       setLoading(false)
     }
 
@@ -181,6 +213,61 @@ export function DashboardPage() {
     },
   ]
 
+  const programStats = [
+    {
+      detail: 'Sistemdeki toplam program sayısı',
+      icon: BookOpen,
+      label: 'Toplam program',
+      value: String(programMetrics.totalPrograms),
+    },
+    {
+      detail: 'Aktif olarak yayında olan programlar',
+      icon: CheckCircle2,
+      label: 'Aktif program',
+      value: String(programMetrics.activePrograms),
+    },
+    {
+      detail: 'Sistemdeki toplam kayıt sayısı',
+      icon: ClipboardList,
+      label: 'Toplam kayıt',
+      value: String(programMetrics.totalRegistrations),
+    },
+    {
+      detail: 'Kesin kayıt durumundaki kayıtlar',
+      icon: CheckCircle2,
+      label: 'Kesin kayıt',
+      value: String(programMetrics.confirmedRegistrations),
+    },
+    {
+      detail: 'Ön kayıt durumundaki kayıtlar',
+      icon: ClipboardList,
+      label: 'Ön kayıt',
+      value: String(programMetrics.preRegistrations),
+    },
+    {
+      detail: 'İptal edilen kayıtlar',
+      icon: AlertCircle,
+      label: 'İptal kayıt',
+      value: String(programMetrics.cancelledRegistrations),
+    },
+    {
+      detail: 'Bu ay oluşturulan kayıtlar',
+      icon: TrendingUp,
+      label: 'Bu ay kayıt',
+      value: String(programMetrics.registrationsThisMonth),
+    },
+    {
+      detail: 'Doluluk oranı en yüksek program',
+      icon: BookOpen,
+      label: 'En dolu program',
+      value: programMetrics.highestFillProgram
+        ? `${programMetrics.highestFillProgram.name} (${Math.round(
+            programMetrics.highestFillProgram.fillRate,
+          )}%)`
+        : '-',
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -221,6 +308,80 @@ export function DashboardPage() {
               {taskStats.map((stat) => (
                 <StatCard key={stat.label} {...stat} />
               ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-neutral-950">
+              Program ve Kayıt Özeti
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {programStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </div>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-neutral-950">
+                Son 5 Kayıt
+              </h2>
+              <div className="mt-4 divide-y divide-neutral-200">
+                {programMetrics.recentRegistrations.length > 0 ? (
+                  programMetrics.recentRegistrations.map((registration) => {
+                    const parent = normalizeRelation(registration.parent)
+                    const student = normalizeRelation(registration.student)
+
+                    return (
+                      <article
+                        key={registration.id}
+                        className="py-3 first:pt-0 last:pb-0"
+                      >
+                        <p className="text-sm font-semibold text-neutral-950">
+                          {student?.full_name ?? 'Öğrenci yok'}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {parent?.full_name ?? 'Veli yok'} ·{' '}
+                          {registration.registration_date ?? '-'}
+                        </p>
+                      </article>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Henüz kayıt bulunmuyor.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-neutral-950">
+                Kontenjanı Dolmaya Yakın Programlar
+              </h2>
+              <div className="mt-4 divide-y divide-neutral-200">
+                {programMetrics.programsNearCapacity.length > 0 ? (
+                  programMetrics.programsNearCapacity.map((program) => (
+                    <article
+                      key={program.id}
+                      className="py-3 first:pt-0 last:pb-0"
+                    >
+                      <p className="text-sm font-semibold text-neutral-950">
+                        {program.name}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {program.registeredCount}/{program.quota ?? '-'} kayıt ·{' '}
+                        {Math.round(program.fillRate)}%
+                      </p>
+                    </article>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Dolmaya yakın program bulunmuyor.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 

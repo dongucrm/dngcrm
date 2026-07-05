@@ -1,7 +1,7 @@
 import { supabase } from '../../../lib/supabase'
 import type { Note } from '../../../types/database'
 
-export type NoteEntityType = 'parent' | 'student'
+export type NoteEntityType = 'parent' | 'student' | 'program' | 'registration'
 
 export type NoteRecord = Note & {
   user?: { id: string; full_name: string | null } | { id: string; full_name: string | null }[] | null

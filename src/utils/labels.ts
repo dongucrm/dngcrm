@@ -12,9 +12,12 @@ import type {
 
 export const programTypeLabels: Record<ProgramType, string> = {
   kamp: 'Kamp',
-  atolye: 'Atölye',
-  egitim: 'Eğitim',
-  danismanlik: 'Danışmanlık',
+  kurs: 'Kurs',
+  atolye: 'At?lye',
+  yetiskin_egitimi: 'Yeti?kin E?itimi',
+  diger: 'Di?er',
+  egitim: 'E?itim',
+  danismanlik: 'Dan??manl?k',
   etkinlik: 'Etkinlik',
 }
 

@@ -5,7 +5,10 @@ export type AppRole = 'admin' | 'satis_personeli'
 
 export type ProgramType =
   | 'kamp'
+  | 'kurs'
   | 'atolye'
+  | 'yetiskin_egitimi'
+  | 'diger'
   | 'egitim'
   | 'danismanlik'
   | 'etkinlik'
@@ -80,6 +83,7 @@ export type Program = {
   name: string
   type: ProgramType
   description: string | null
+  notes: string | null
   price: number | null
   start_date: DateString | null
   end_date: DateString | null
@@ -144,6 +148,8 @@ export type Registration = {
   discount_amount: number | null
   final_price: number | null
   notes: string | null
+  created_by: DatabaseId | null
+  source_lead_id: DatabaseId | null
   created_at: Timestamp | null
 }
 
@@ -260,11 +266,26 @@ export type ProgramFormData = {
   name: string
   type: ProgramType
   description?: string
+  notes?: string
   price?: number
   start_date?: DateString
   end_date?: DateString
   quota?: number
   is_active: boolean
+}
+
+export type RegistrationFormData = {
+  parent_id?: DatabaseId
+  student_id?: DatabaseId
+  program_id?: DatabaseId
+  status: RegistrationStatus
+  registration_date?: DateString
+  total_price?: number
+  discount_amount?: number
+  final_price?: number
+  notes?: string
+  created_by?: DatabaseId
+  source_lead_id?: DatabaseId
 }
 
 export type PaymentFormData = {

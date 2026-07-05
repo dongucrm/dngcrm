@@ -95,9 +95,9 @@ export const menuItems: MenuItem[] = [
     label: 'Kayıtlar',
     path: '/registrations',
     icon: ClipboardList,
-    visibleRoles: adminOnly,
-    routeRoles: adminOnly,
-    editRoles: adminOnly,
+    visibleRoles: allRoles,
+    routeRoles: allRoles,
+    editRoles: allRoles,
   },
   {
     id: 'payments',

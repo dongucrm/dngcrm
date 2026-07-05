@@ -37,6 +37,7 @@ create table if not exists public.programs (
   name text not null,
   type text not null,
   description text,
+  notes text,
   price numeric default 0,
   start_date date,
   end_date date,
@@ -101,6 +102,8 @@ create table if not exists public.registrations (
   discount_amount numeric default 0,
   final_price numeric default 0,
   notes text,
+  created_by uuid references public.profiles(id),
+  source_lead_id uuid references public.leads(id),
   created_at timestamptz default now()
 );
 
@@ -174,6 +177,13 @@ create table if not exists public.audit_logs (
   new_data jsonb,
   created_at timestamptz default now()
 );
+
+alter table public.programs
+  add column if not exists notes text;
+
+alter table public.registrations
+  add column if not exists created_by uuid references public.profiles(id),
+  add column if not exists source_lead_id uuid references public.leads(id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -371,12 +381,39 @@ as $$
     );
 $$;
 
+create or replace function public.sales_can_access_registration(target_registration_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(public.is_sales(), false)
+    and exists (
+      select 1
+      from public.registrations r
+      where r.id = target_registration_id
+        and (
+          r.created_by = auth.uid()
+          or public.sales_can_access_parent(r.parent_id)
+          or public.sales_can_access_student(r.student_id)
+          or exists (
+            select 1
+            from public.leads l
+            where l.id = r.source_lead_id
+              and l.assigned_user_id = auth.uid()
+          )
+        )
+    );
+$$;
+
 create index if not exists idx_profiles_role_id on public.profiles(role_id);
 create index if not exists idx_profiles_is_active on public.profiles(is_active);
 
 create index if not exists idx_programs_type on public.programs(type);
 create index if not exists idx_programs_is_active on public.programs(is_active);
 create index if not exists idx_programs_start_date on public.programs(start_date);
+create index if not exists idx_programs_end_date on public.programs(end_date);
 
 create index if not exists idx_leads_interested_program_id on public.leads(interested_program_id);
 create index if not exists idx_leads_assigned_user_id on public.leads(assigned_user_id);
@@ -400,6 +437,8 @@ create index if not exists idx_registrations_student_id on public.registrations(
 create index if not exists idx_registrations_program_id on public.registrations(program_id);
 create index if not exists idx_registrations_status on public.registrations(status);
 create index if not exists idx_registrations_registration_date on public.registrations(registration_date);
+create index if not exists idx_registrations_created_by on public.registrations(created_by);
+create index if not exists idx_registrations_source_lead_id on public.registrations(source_lead_id);
 
 create index if not exists idx_payments_registration_id on public.payments(registration_id);
 create index if not exists idx_payments_parent_id on public.payments(parent_id);
@@ -470,6 +509,7 @@ grant execute on function public.prevent_sales_lead_restricted_update() to authe
 grant execute on function public.prevent_sales_task_restricted_update() to authenticated;
 grant execute on function public.sales_can_access_parent(uuid) to authenticated;
 grant execute on function public.sales_can_access_student(uuid) to authenticated;
+grant execute on function public.sales_can_access_registration(uuid) to authenticated;
 
 drop policy if exists "admins_manage_roles" on public.roles;
 create policy "admins_manage_roles"
@@ -645,6 +685,7 @@ with check (
 drop policy if exists "admins_manage_registrations" on public.registrations;
 drop policy if exists "sales_read_related_registrations" on public.registrations;
 drop policy if exists "sales_insert_related_registrations" on public.registrations;
+drop policy if exists "sales_update_own_registrations" on public.registrations;
 
 create policy "admins_manage_registrations"
 on public.registrations
@@ -657,13 +698,7 @@ create policy "sales_read_related_registrations"
 on public.registrations
 for select
 to authenticated
-using (
-  public.is_sales()
-  and (
-    public.sales_can_access_parent(parent_id)
-    or public.sales_can_access_student(student_id)
-  )
-);
+using (public.sales_can_access_registration(id));
 
 create policy "sales_insert_related_registrations"
 on public.registrations
@@ -671,9 +706,40 @@ for insert
 to authenticated
 with check (
   public.is_sales()
+  and created_by = auth.uid()
   and (
     public.sales_can_access_parent(parent_id)
     or public.sales_can_access_student(student_id)
+    or exists (
+      select 1
+      from public.leads l
+      where l.id = source_lead_id
+        and l.assigned_user_id = auth.uid()
+    )
+  )
+);
+
+create policy "sales_update_own_registrations"
+on public.registrations
+for update
+to authenticated
+using (
+  public.is_sales()
+  and created_by = auth.uid()
+  and public.sales_can_access_registration(id)
+)
+with check (
+  public.is_sales()
+  and created_by = auth.uid()
+  and (
+    public.sales_can_access_parent(parent_id)
+    or public.sales_can_access_student(student_id)
+    or exists (
+      select 1
+      from public.leads l
+      where l.id = source_lead_id
+        and l.assigned_user_id = auth.uid()
+    )
   )
 );
 
@@ -867,6 +933,19 @@ using (
       entity_type = 'student'
       and public.sales_can_access_student(entity_id)
     )
+    or (
+      entity_type = 'program'
+      and exists (
+        select 1
+        from public.programs p
+        where p.id = entity_id
+          and p.is_active = true
+      )
+    )
+    or (
+      entity_type = 'registration'
+      and public.sales_can_access_registration(entity_id)
+    )
   )
 );
 
@@ -885,6 +964,19 @@ with check (
     or (
       entity_type = 'student'
       and public.sales_can_access_student(entity_id)
+    )
+    or (
+      entity_type = 'program'
+      and exists (
+        select 1
+        from public.programs p
+        where p.id = entity_id
+          and p.is_active = true
+      )
+    )
+    or (
+      entity_type = 'registration'
+      and public.sales_can_access_registration(entity_id)
     )
   )
 );

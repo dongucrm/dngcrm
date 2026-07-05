@@ -10,6 +10,10 @@ import { LoginPage } from '../pages/LoginPage'
 import { ModulePlaceholderPage } from '../pages/ModulePlaceholderPage'
 import { ParentDetailPage } from '../pages/ParentDetailPage'
 import { ParentsPage } from '../pages/ParentsPage'
+import { ProgramDetailPage } from '../pages/ProgramDetailPage'
+import { ProgramsPage } from '../pages/ProgramsPage'
+import { RegistrationDetailPage } from '../pages/RegistrationDetailPage'
+import { RegistrationsPage } from '../pages/RegistrationsPage'
 import { StudentDetailPage } from '../pages/StudentDetailPage'
 import { StudentsPage } from '../pages/StudentsPage'
 import { TasksPage } from '../pages/TasksPage'
@@ -20,6 +24,10 @@ const dashboardMenuItem = menuItems.find((item) => item.id === 'dashboard')
 const leadsMenuItem = menuItems.find((item) => item.id === 'leads')
 const parentsMenuItem = menuItems.find((item) => item.id === 'parents')
 const studentsMenuItem = menuItems.find((item) => item.id === 'students')
+const programsMenuItem = menuItems.find((item) => item.id === 'programs')
+const registrationsMenuItem = menuItems.find(
+  (item) => item.id === 'registrations',
+)
 const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
 const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
 const placeholderMenuItems = moduleMenuItems.filter(
@@ -27,6 +35,8 @@ const placeholderMenuItems = moduleMenuItems.filter(
     item.id !== 'leads' &&
     item.id !== 'parents' &&
     item.id !== 'students' &&
+    item.id !== 'programs' &&
+    item.id !== 'registrations' &&
     item.id !== 'call-list' &&
     item.id !== 'tasks',
 )
@@ -131,6 +141,54 @@ export function AppRoutes() {
                 <ProtectedRoute>
                   <RoleBasedRoute allowedRoles={studentsMenuItem.routeRoles}>
                     <StudentDetailPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
+        {programsMenuItem ? (
+          <>
+            <Route
+              path={getRoutePath(programsMenuItem.path)}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={programsMenuItem.routeRoles}>
+                    <ProgramsPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`${getRoutePath(programsMenuItem.path)}/:programId`}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={programsMenuItem.routeRoles}>
+                    <ProgramDetailPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
+        {registrationsMenuItem ? (
+          <>
+            <Route
+              path={getRoutePath(registrationsMenuItem.path)}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={registrationsMenuItem.routeRoles}>
+                    <RegistrationsPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`${getRoutePath(registrationsMenuItem.path)}/:registrationId`}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={registrationsMenuItem.routeRoles}>
+                    <RegistrationDetailPage />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }

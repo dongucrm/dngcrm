@@ -20,6 +20,7 @@ type ServiceResult<T> = {
   data?: T
   duplicateParent?: ParentRecord
   error?: string
+  registrationId?: string
 }
 
 type LeadConversionValues = {
@@ -427,6 +428,7 @@ export async function convertLeadToParentStudent(
   }
 
   const childName = cleanText(lead.child_name)
+  let registrationId: string | undefined
 
   if (childName) {
     const { data: existingStudents, error: studentCheckError } = await supabase
@@ -468,17 +470,31 @@ export async function convertLeadToParentStudent(
     }
 
     if (values.createRegistration && values.programId) {
-      const { error: registrationError } = await supabase
+      const { data: programData } = await supabase
+        .from('programs')
+        .select('price')
+        .eq('id', values.programId)
+        .maybeSingle()
+      const price = Number(programData?.price ?? 0)
+      const { data: registrationData, error: registrationError } = await supabase
         .from('registrations')
         .insert({
+          created_by: auth.userId,
+          final_price: price,
           parent_id: parentId,
           program_id: values.programId,
+          source_lead_id: lead.id,
           student_id: studentData.id,
+          total_price: price,
           status:
             values.leadStatus === 'kayit_oldu' ? 'kesin_kayit' : 'on_kayit',
         })
+        .select('id')
+        .maybeSingle()
 
-      if (registrationError) {
+      registrationId = registrationData?.id
+
+      if (registrationError || !registrationData) {
         return { error: 'Kayıt oluşturulamadı.' }
       }
     }
@@ -489,7 +505,12 @@ export async function convertLeadToParentStudent(
     .update({ status: values.leadStatus })
     .eq('id', lead.id)
 
-  return fetchParentDetail(parentId)
+  const parentResult = await fetchParentDetail(parentId)
+
+  return {
+    ...parentResult,
+    registrationId,
+  }
 }
 
 async function countTable(tableName: 'parents' | 'students') {
