@@ -72,6 +72,8 @@ create table if not exists public.parents (
   email text,
   address text,
   notes text,
+  created_by uuid references public.profiles(id),
+  source_lead_id uuid references public.leads(id),
   created_at timestamptz default now()
 );
 
@@ -83,6 +85,8 @@ create table if not exists public.students (
   birth_date date,
   school text,
   notes text,
+  created_by uuid references public.profiles(id),
+  source_lead_id uuid references public.leads(id),
   created_at timestamptz default now()
 );
 
@@ -304,6 +308,69 @@ before update on public.tasks
 for each row
 execute function public.prevent_sales_task_restricted_update();
 
+create or replace function public.sales_can_access_parent(target_parent_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(public.is_sales(), false)
+    and exists (
+      select 1
+      from public.parents p
+      where p.id = target_parent_id
+        and (
+          p.created_by = auth.uid()
+          or exists (
+            select 1
+            from public.leads l
+            where l.id = p.source_lead_id
+              and l.assigned_user_id = auth.uid()
+          )
+          or exists (
+            select 1
+            from public.students s
+            where s.parent_id = p.id
+              and (
+                s.created_by = auth.uid()
+                or exists (
+                  select 1
+                  from public.leads sl
+                  where sl.id = s.source_lead_id
+                    and sl.assigned_user_id = auth.uid()
+                )
+              )
+          )
+        )
+    );
+$$;
+
+create or replace function public.sales_can_access_student(target_student_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(public.is_sales(), false)
+    and exists (
+      select 1
+      from public.students s
+      where s.id = target_student_id
+        and (
+          s.created_by = auth.uid()
+          or exists (
+            select 1
+            from public.leads l
+            where l.id = s.source_lead_id
+              and l.assigned_user_id = auth.uid()
+          )
+          or public.sales_can_access_parent(s.parent_id)
+        )
+    );
+$$;
+
 create index if not exists idx_profiles_role_id on public.profiles(role_id);
 create index if not exists idx_profiles_is_active on public.profiles(is_active);
 
@@ -320,9 +387,13 @@ create index if not exists idx_leads_created_at on public.leads(created_at);
 
 create index if not exists idx_parents_phone on public.parents(phone);
 create index if not exists idx_parents_email on public.parents(email);
+create index if not exists idx_parents_created_by on public.parents(created_by);
+create index if not exists idx_parents_source_lead_id on public.parents(source_lead_id);
 
 create index if not exists idx_students_parent_id on public.students(parent_id);
 create index if not exists idx_students_full_name on public.students(full_name);
+create index if not exists idx_students_created_by on public.students(created_by);
+create index if not exists idx_students_source_lead_id on public.students(source_lead_id);
 
 create index if not exists idx_registrations_parent_id on public.registrations(parent_id);
 create index if not exists idx_registrations_student_id on public.registrations(student_id);
@@ -397,6 +468,8 @@ grant execute on function public.is_admin() to authenticated;
 grant execute on function public.is_sales() to authenticated;
 grant execute on function public.prevent_sales_lead_restricted_update() to authenticated;
 grant execute on function public.prevent_sales_task_restricted_update() to authenticated;
+grant execute on function public.sales_can_access_parent(uuid) to authenticated;
+grant execute on function public.sales_can_access_student(uuid) to authenticated;
 
 drop policy if exists "admins_manage_roles" on public.roles;
 create policy "admins_manage_roles"
@@ -486,6 +559,10 @@ with check (
 );
 
 drop policy if exists "admins_manage_parents" on public.parents;
+drop policy if exists "sales_read_related_parents" on public.parents;
+drop policy if exists "sales_insert_own_parents" on public.parents;
+drop policy if exists "sales_update_own_parents" on public.parents;
+
 create policy "admins_manage_parents"
 on public.parents
 for all
@@ -493,7 +570,39 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+create policy "sales_read_related_parents"
+on public.parents
+for select
+to authenticated
+using (public.sales_can_access_parent(id));
+
+create policy "sales_insert_own_parents"
+on public.parents
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and created_by = auth.uid()
+);
+
+create policy "sales_update_own_parents"
+on public.parents
+for update
+to authenticated
+using (
+  public.is_sales()
+  and created_by = auth.uid()
+)
+with check (
+  public.is_sales()
+  and created_by = auth.uid()
+);
+
 drop policy if exists "admins_manage_students" on public.students;
+drop policy if exists "sales_read_related_students" on public.students;
+drop policy if exists "sales_insert_own_students" on public.students;
+drop policy if exists "sales_update_own_students" on public.students;
+
 create policy "admins_manage_students"
 on public.students
 for all
@@ -501,7 +610,42 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+create policy "sales_read_related_students"
+on public.students
+for select
+to authenticated
+using (public.sales_can_access_student(id));
+
+create policy "sales_insert_own_students"
+on public.students
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and created_by = auth.uid()
+  and (
+    parent_id is null
+    or public.sales_can_access_parent(parent_id)
+  )
+);
+
+create policy "sales_update_own_students"
+on public.students
+for update
+to authenticated
+using (
+  public.is_sales()
+  and created_by = auth.uid()
+)
+with check (
+  public.is_sales()
+  and created_by = auth.uid()
+);
+
 drop policy if exists "admins_manage_registrations" on public.registrations;
+drop policy if exists "sales_read_related_registrations" on public.registrations;
+drop policy if exists "sales_insert_related_registrations" on public.registrations;
+
 create policy "admins_manage_registrations"
 on public.registrations
 for all
@@ -509,13 +653,48 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
+create policy "sales_read_related_registrations"
+on public.registrations
+for select
+to authenticated
+using (
+  public.is_sales()
+  and (
+    public.sales_can_access_parent(parent_id)
+    or public.sales_can_access_student(student_id)
+  )
+);
+
+create policy "sales_insert_related_registrations"
+on public.registrations
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and (
+    public.sales_can_access_parent(parent_id)
+    or public.sales_can_access_student(student_id)
+  )
+);
+
 drop policy if exists "admins_manage_payments" on public.payments;
+drop policy if exists "sales_read_related_payments" on public.payments;
+
 create policy "admins_manage_payments"
 on public.payments
 for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy "sales_read_related_payments"
+on public.payments
+for select
+to authenticated
+using (
+  public.is_sales()
+  and public.sales_can_access_parent(parent_id)
+);
 
 drop policy if exists "admins_manage_call_logs" on public.call_logs;
 create policy "admins_manage_call_logs"
@@ -533,11 +712,14 @@ to authenticated
 with check (
   public.is_sales()
   and user_id = auth.uid()
-  and exists (
-    select 1
-    from public.leads l
-    where l.id = lead_id
-      and l.assigned_user_id = auth.uid()
+  and (
+    exists (
+      select 1
+      from public.leads l
+      where l.id = lead_id
+        and l.assigned_user_id = auth.uid()
+    )
+    or public.sales_can_access_parent(parent_id)
   )
 );
 
@@ -557,6 +739,7 @@ using (
       where l.id = lead_id
         and l.assigned_user_id = auth.uid()
     )
+    or public.sales_can_access_parent(parent_id)
   )
 );
 
@@ -573,12 +756,18 @@ with check (
   public.is_sales()
   and user_id = auth.uid()
   and (
-    lead_id is null
-    or exists (
-      select 1
-      from public.leads l
-      where l.id = lead_id
-        and l.assigned_user_id = auth.uid()
+    (
+      lead_id is null
+      or exists (
+        select 1
+        from public.leads l
+        where l.id = lead_id
+          and l.assigned_user_id = auth.uid()
+      )
+    )
+    and (
+      parent_id is null
+      or public.sales_can_access_parent(parent_id)
     )
   )
 );
@@ -651,12 +840,67 @@ to authenticated
 using (is_active = true);
 
 drop policy if exists "admins_manage_notes" on public.notes;
+drop policy if exists "sales_read_related_notes" on public.notes;
+drop policy if exists "sales_insert_own_notes" on public.notes;
+drop policy if exists "sales_update_own_notes" on public.notes;
+
 create policy "admins_manage_notes"
 on public.notes
 for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
+
+create policy "sales_read_related_notes"
+on public.notes
+for select
+to authenticated
+using (
+  public.is_sales()
+  and (
+    user_id = auth.uid()
+    or (
+      entity_type = 'parent'
+      and public.sales_can_access_parent(entity_id)
+    )
+    or (
+      entity_type = 'student'
+      and public.sales_can_access_student(entity_id)
+    )
+  )
+);
+
+create policy "sales_insert_own_notes"
+on public.notes
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and user_id = auth.uid()
+  and (
+    (
+      entity_type = 'parent'
+      and public.sales_can_access_parent(entity_id)
+    )
+    or (
+      entity_type = 'student'
+      and public.sales_can_access_student(entity_id)
+    )
+  )
+);
+
+create policy "sales_update_own_notes"
+on public.notes
+for update
+to authenticated
+using (
+  public.is_sales()
+  and user_id = auth.uid()
+)
+with check (
+  public.is_sales()
+  and user_id = auth.uid()
+);
 
 drop policy if exists "admins_manage_audit_logs" on public.audit_logs;
 create policy "admins_manage_audit_logs"

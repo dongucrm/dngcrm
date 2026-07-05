@@ -24,7 +24,10 @@ export function normalizeTurkeyPhone(phone: string) {
   return null
 }
 
-export function getWhatsAppUrl(phone: string | null | undefined) {
+export function getWhatsAppUrl(
+  phone: string | null | undefined,
+  message?: string | null,
+) {
   if (!phone) {
     return null
   }
@@ -35,7 +38,11 @@ export function getWhatsAppUrl(phone: string | null | undefined) {
     return null
   }
 
-  return `https://wa.me/${normalizedPhone}`
+  const textQuery = message?.trim()
+    ? `?text=${encodeURIComponent(message.trim())}`
+    : ''
+
+  return `https://wa.me/${normalizedPhone}${textQuery}`
 }
 
 export function formatPhoneForDisplay(phone: string | null | undefined) {

@@ -8,17 +8,27 @@ import { LeadDetailPage } from '../pages/LeadDetailPage'
 import { LeadsPage } from '../pages/LeadsPage'
 import { LoginPage } from '../pages/LoginPage'
 import { ModulePlaceholderPage } from '../pages/ModulePlaceholderPage'
+import { ParentDetailPage } from '../pages/ParentDetailPage'
+import { ParentsPage } from '../pages/ParentsPage'
+import { StudentDetailPage } from '../pages/StudentDetailPage'
+import { StudentsPage } from '../pages/StudentsPage'
 import { TasksPage } from '../pages/TasksPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleBasedRoute } from './RoleBasedRoute'
 
 const dashboardMenuItem = menuItems.find((item) => item.id === 'dashboard')
 const leadsMenuItem = menuItems.find((item) => item.id === 'leads')
+const parentsMenuItem = menuItems.find((item) => item.id === 'parents')
+const studentsMenuItem = menuItems.find((item) => item.id === 'students')
 const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
 const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
 const placeholderMenuItems = moduleMenuItems.filter(
   (item) =>
-    item.id !== 'leads' && item.id !== 'call-list' && item.id !== 'tasks',
+    item.id !== 'leads' &&
+    item.id !== 'parents' &&
+    item.id !== 'students' &&
+    item.id !== 'call-list' &&
+    item.id !== 'tasks',
 )
 
 function getRoutePath(path: string) {
@@ -78,6 +88,54 @@ export function AppRoutes() {
               </ProtectedRoute>
             }
           />
+        ) : null}
+        {parentsMenuItem ? (
+          <>
+            <Route
+              path={getRoutePath(parentsMenuItem.path)}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={parentsMenuItem.routeRoles}>
+                    <ParentsPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`${getRoutePath(parentsMenuItem.path)}/:parentId`}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={parentsMenuItem.routeRoles}>
+                    <ParentDetailPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
+        {studentsMenuItem ? (
+          <>
+            <Route
+              path={getRoutePath(studentsMenuItem.path)}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={studentsMenuItem.routeRoles}>
+                    <StudentsPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`${getRoutePath(studentsMenuItem.path)}/:studentId`}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={studentsMenuItem.routeRoles}>
+                    <StudentDetailPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+          </>
         ) : null}
         {tasksMenuItem ? (
           <Route

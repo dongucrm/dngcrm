@@ -51,6 +51,14 @@ Tasks / gorev RLS guncellemesi icin:
 
 Bu migration tablo silmez ve veri kaybi olusturmaz. `tasks` tablosuna `created_by` alanini ekler, gorev indexlerini tamamlar ve admin / satis personeli RLS kurallarini gunceller.
 
+Parents / students / notes RLS guncellemesi icin:
+
+1. `supabase/migrations/017_parents_students_notes_rls_update.sql` dosyasinin tamamini kopyalayin.
+2. Supabase SQL Editor icinde yeni bir query acin.
+3. Icerigi yapistirip Run butonuna basin.
+
+Bu migration tablo silmez ve veri kaybi olusturmaz. `parents` ve `students` tablolarina `created_by` / `source_lead_id` alanlarini ekler, parent-student-note RLS kurallarini ve ilgili registration/payment okuma policylerini gunceller.
+
 ## 6. Project URL ve Publishable Key Alma
 
 1. Supabase Dashboard icinde Project Settings ekranina girin.

@@ -2,14 +2,18 @@ import {
   AlertCircle,
   CheckCircle2,
   ClipboardList,
+  GraduationCap,
   PhoneCall,
   TrendingUp,
+  UsersRound,
   UserX,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { StatCard } from '../components/StatCard'
 import { fetchDashboardCallMetrics } from '../features/calls/services/callLogService'
 import type { CallDashboardMetrics } from '../features/calls/types'
+import { fetchParentDashboardMetrics } from '../features/parents/services/parentService'
+import type { ParentDashboardMetrics } from '../features/parents/types'
 import { TodayTasksWidget } from '../features/tasks/components/TodayTasksWidget'
 import { fetchTaskDashboardMetrics } from '../features/tasks/services/taskService'
 import type { TaskDashboardMetrics } from '../features/tasks/types'
@@ -31,6 +35,14 @@ const emptyTaskMetrics: TaskDashboardMetrics = {
   todayCount: 0,
 }
 
+const emptyParentMetrics: ParentDashboardMetrics = {
+  activeStudents: 0,
+  parentsThisMonth: 0,
+  studentsThisMonth: 0,
+  totalParents: 0,
+  totalStudents: 0,
+}
+
 export function DashboardPage() {
   usePageTitle('Dashboard')
 
@@ -45,6 +57,7 @@ export function DashboardPage() {
   )
   const [metrics, setMetrics] = useState(emptyMetrics)
   const [taskMetrics, setTaskMetrics] = useState(emptyTaskMetrics)
+  const [parentMetrics, setParentMetrics] = useState(emptyParentMetrics)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -52,9 +65,10 @@ export function DashboardPage() {
 
     async function loadMetrics() {
       setLoading(true)
-      const [nextMetrics, nextTaskMetrics] = await Promise.all([
+      const [nextMetrics, nextTaskMetrics, nextParentMetrics] = await Promise.all([
         fetchDashboardCallMetrics(authContext),
         fetchTaskDashboardMetrics(authContext),
+        fetchParentDashboardMetrics(),
       ])
 
       if (!isMounted) {
@@ -63,6 +77,7 @@ export function DashboardPage() {
 
       setMetrics(nextMetrics)
       setTaskMetrics(nextTaskMetrics)
+      setParentMetrics(nextParentMetrics)
       setLoading(false)
     }
 
@@ -133,6 +148,39 @@ export function DashboardPage() {
     },
   ]
 
+  const parentStats = [
+    {
+      detail: 'Sistemdeki toplam veli sayısı',
+      icon: UsersRound,
+      label: 'Toplam veli',
+      value: String(parentMetrics.totalParents),
+    },
+    {
+      detail: 'Sistemdeki toplam öğrenci sayısı',
+      icon: GraduationCap,
+      label: 'Toplam öğrenci',
+      value: String(parentMetrics.totalStudents),
+    },
+    {
+      detail: 'Aktif kaydı bulunan öğrenci sayısı',
+      icon: CheckCircle2,
+      label: 'Aktif kayıtlı öğrenci',
+      value: String(parentMetrics.activeStudents),
+    },
+    {
+      detail: 'Bu ay eklenen veli kayıtları',
+      icon: UsersRound,
+      label: 'Bu ay veli',
+      value: String(parentMetrics.parentsThisMonth),
+    },
+    {
+      detail: 'Bu ay eklenen öğrenci kayıtları',
+      icon: GraduationCap,
+      label: 'Bu ay öğrenci',
+      value: String(parentMetrics.studentsThisMonth),
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -152,6 +200,17 @@ export function DashboardPage() {
             {stats.map((stat) => (
               <StatCard key={stat.label} {...stat} />
             ))}
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-neutral-950">
+              Veli ve Öğrenci Özeti
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              {parentStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </div>
           </section>
 
           <section>

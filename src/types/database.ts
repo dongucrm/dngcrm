@@ -115,6 +115,8 @@ export type Parent = {
   email: string | null
   address: string | null
   notes: string | null
+  created_by: DatabaseId | null
+  source_lead_id: DatabaseId | null
   created_at: Timestamp | null
 }
 
@@ -126,6 +128,8 @@ export type Student = {
   birth_date: DateString | null
   school: string | null
   notes: string | null
+  created_by: DatabaseId | null
+  source_lead_id: DatabaseId | null
   created_at: Timestamp | null
 }
 
@@ -237,6 +241,8 @@ export type ParentFormData = {
   email?: string
   address?: string
   notes?: string
+  created_by?: DatabaseId
+  source_lead_id?: DatabaseId
 }
 
 export type StudentFormData = {
@@ -246,6 +252,8 @@ export type StudentFormData = {
   birth_date?: DateString
   school?: string
   notes?: string
+  created_by?: DatabaseId
+  source_lead_id?: DatabaseId
 }
 
 export type ProgramFormData = {

@@ -59,6 +59,20 @@ export function getCurrentWeekRange() {
   }
 }
 
+export function getCurrentMonthRange() {
+  const start = new Date()
+  start.setDate(1)
+  start.setHours(0, 0, 0, 0)
+
+  const end = new Date(start)
+  end.setMonth(end.getMonth() + 1)
+
+  return {
+    end: end.toISOString(),
+    start: start.toISOString(),
+  }
+}
+
 export function isPastDateTimeLocal(value: string) {
   if (!value) {
     return false

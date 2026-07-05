@@ -17,6 +17,7 @@ type CallLogFormProps = {
   authUserId: string | null
   editingLog: CallLogRecord | null
   initialLead: CallTargetRecord | null
+  initialParent?: CallReferences['parents'][number] | null
   isAdmin: boolean
   isOpen: boolean
   references: CallReferences
@@ -36,6 +37,7 @@ export function CallLogForm({
   authUserId,
   editingLog,
   initialLead,
+  initialParent = null,
   isAdmin,
   isOpen,
   onClose,
@@ -82,11 +84,11 @@ export function CallLogForm({
       lead_id: initialLead?.id ?? '',
       next_call_date: toDateTimeLocalValue(initialLead?.next_call_date),
       notes: '',
-      parent_id: '',
+      parent_id: initialParent?.id ?? '',
       sync_notes_to_lead: true,
       user_id: authUserId ?? '',
     })
-  }, [authUserId, editingLog, initialLead, isOpen])
+  }, [authUserId, editingLog, initialLead, initialParent, isOpen])
 
   const selectedLead = useMemo(
     () => references.leads.find((lead) => lead.id === form.lead_id) ?? null,
