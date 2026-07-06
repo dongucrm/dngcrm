@@ -2,6 +2,7 @@ import type {
   DatabaseId,
   Parent,
   Payment,
+  PaymentInstallment,
   PaymentStatus,
   Program,
   Registration,
@@ -29,7 +30,9 @@ export type StudentPayment = Pick<
   | 'payment_status'
   | 'due_date'
   | 'payment_date'
->
+> & {
+  installments?: PaymentInstallment[] | null
+}
 
 export type StudentRecord = Student & {
   parent?: StudentParent | StudentParent[] | null

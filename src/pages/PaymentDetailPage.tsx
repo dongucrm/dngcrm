@@ -1,6 +1,6 @@
 import {
   ArrowLeft,
-  CreditCard,
+  Banknote,
   ListChecks,
   MessageCircle,
   NotebookPen,
@@ -8,33 +8,29 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import type { PaymentInstallment } from '../types/database'
 import { NotesSection } from '../features/notes/components/NotesSection'
+import { CollectPaymentModal } from '../features/payments/components/CollectPaymentModal'
 import { InstallmentsTable } from '../features/payments/components/InstallmentsTable'
 import { PaymentForm } from '../features/payments/components/PaymentForm'
+import { PaymentSummary } from '../features/payments/components/PaymentSummary'
 import {
+  buildPaymentWhatsAppMessage,
+  collectPayment,
+  fetchPaymentDetail,
   fetchPaymentReferences,
+  getPaymentParentRecord,
+  getPaymentProgram,
+  getPaymentRegistration,
+  getPaymentStudent,
   savePayment,
 } from '../features/payments/services/paymentService'
 import type {
+  CollectPaymentValues,
   PaymentFormValues,
   PaymentRecord,
   PaymentReferences,
 } from '../features/payments/types'
-import { RegistrationForm } from '../features/registrations/components/RegistrationForm'
-import {
-  fetchRegistrationDetail,
-  fetchRegistrationReferences,
-  getRegistrationParent,
-  getRegistrationProgram,
-  getRegistrationStudent,
-  saveRegistration,
-} from '../features/registrations/services/registrationService'
-import type {
-  RegistrationFormValues,
-  RegistrationRecord,
-  RegistrationReferences,
-  RegistrationSaveOptions,
-} from '../features/registrations/types'
 import { TaskForm } from '../features/tasks/components/TaskForm'
 import {
   createTaskValuesFromParent,
@@ -49,16 +45,15 @@ import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
 import {
+  paymentMethodLabels,
   paymentStatusLabels,
   registrationStatusLabels,
   taskStatusLabels,
 } from '../utils/labels'
 import { getWhatsAppUrl } from '../utils/phone'
 
-const emptyRegistrationReferences: RegistrationReferences = {
-  parents: [],
-  programs: [],
-  students: [],
+const emptyPaymentReferences: PaymentReferences = {
+  registrations: [],
   whatsappTemplates: [],
 }
 
@@ -66,11 +61,6 @@ const emptyTaskReferences: TaskReferences = {
   leads: [],
   parents: [],
   profiles: [],
-}
-
-const emptyPaymentReferences: PaymentReferences = {
-  registrations: [],
-  whatsappTemplates: [],
 }
 
 function formatCurrency(value: number | null | undefined) {
@@ -100,38 +90,19 @@ function DetailField({
   )
 }
 
-function buildWhatsAppMessage(
-  template: string | undefined,
-  registration: RegistrationRecord,
-) {
-  if (!template) {
-    return undefined
-  }
-
-  const parent = getRegistrationParent(registration)
-  const student = getRegistrationStudent(registration)
-  const program = getRegistrationProgram(registration)
-  const status = registration.status
-    ? registrationStatusLabels[registration.status]
-    : ''
-  const replacements = {
-    kalan_odeme: formatCurrency(registration.remaining_amount),
-    kayit_durumu: status,
-    net_fiyat: formatCurrency(registration.final_price),
-    ogrenci_adi: student?.full_name ?? '',
-    program_adi: program?.name ?? '',
-    veli_adi: parent?.full_name ?? '',
-  }
-
-  return Object.entries(replacements).reduce(
-    (message, [key, value]) =>
-      message.replaceAll(`{{${key}}}`, value).replaceAll(`{${key}}`, value),
-    template,
+function getFirstCollectableInstallment(payment: PaymentRecord) {
+  return (
+    payment.installments?.find(
+      (installment) =>
+        installment.status !== 'odendi' &&
+        installment.status !== 'iptal' &&
+        Number(installment.remaining_amount ?? 0) > 0,
+    ) ?? null
   )
 }
 
-export function RegistrationDetailPage() {
-  const { registrationId } = useParams()
+export function PaymentDetailPage() {
+  const { paymentId } = useParams()
   const { isAdmin, isSales, user } = useAuth()
   const auth = useMemo(
     () => ({
@@ -141,108 +112,63 @@ export function RegistrationDetailPage() {
     }),
     [isAdmin, isSales, user?.id],
   )
-  const [registration, setRegistration] = useState<RegistrationRecord | null>(
-    null,
-  )
-  const [registrationReferences, setRegistrationReferences] =
-    useState<RegistrationReferences>(emptyRegistrationReferences)
-  const [taskReferences, setTaskReferences] =
-    useState<TaskReferences>(emptyTaskReferences)
+  const [payment, setPayment] = useState<PaymentRecord | null>(null)
   const [paymentReferences, setPaymentReferences] =
     useState<PaymentReferences>(emptyPaymentReferences)
+  const [taskReferences, setTaskReferences] =
+    useState<TaskReferences>(emptyTaskReferences)
+  const [selectedInstallment, setSelectedInstallment] =
+    useState<PaymentInstallment | null>(null)
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
-  const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false)
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false)
+  const [isCollectOpen, setIsCollectOpen] = useState(false)
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  usePageTitle(
-    registration ? `${registration.id.slice(0, 8)} Kayıt Detayı` : 'Kayıt Detayı',
-  )
+  usePageTitle(payment ? 'Ödeme Detayı' : 'Ödeme Detayı')
 
-  const loadRegistration = useCallback(async () => {
-    if (!registrationId) {
+  const loadPayment = useCallback(async () => {
+    if (!paymentId) {
       return
     }
 
     setLoading(true)
     setError(null)
 
-    const result = await fetchRegistrationDetail(registrationId)
+    const result = await fetchPaymentDetail(paymentId)
 
     if (result.error) {
-      setRegistration(null)
+      setPayment(null)
       setError(result.error)
       setLoading(false)
       return
     }
 
-    setRegistration(result.data ?? null)
+    setPayment(result.data ?? null)
     setLoading(false)
-  }, [registrationId])
+  }, [paymentId])
 
   useEffect(() => {
     async function loadReferences() {
-      const [registrationResult, taskResult, paymentResult] = await Promise.all([
-        fetchRegistrationReferences(),
-        fetchTaskReferences(auth),
+      const [paymentResult, taskResult] = await Promise.all([
         fetchPaymentReferences(),
+        fetchTaskReferences(auth),
       ])
 
-      if (registrationResult.data) {
-        setRegistrationReferences(registrationResult.data)
+      if (paymentResult.data) {
+        setPaymentReferences(paymentResult.data)
       }
 
       if (taskResult.data) {
         setTaskReferences(taskResult.data)
       }
-
-      if (paymentResult.data) {
-        setPaymentReferences(paymentResult.data)
-      }
     }
 
     void loadReferences()
-    void loadRegistration()
-  }, [auth, loadRegistration])
-
-  async function handleSaveRegistration(
-    values: RegistrationFormValues,
-    editingRegistration?: RegistrationRecord | null,
-    options?: RegistrationSaveOptions,
-  ) {
-    setSaving(true)
-    const result = await saveRegistration(
-      values,
-      auth,
-      editingRegistration,
-      options,
-    )
-    setSaving(false)
-
-    if (result.error) {
-      return result
-    }
-
-    await loadRegistration()
-    return result
-  }
-
-  async function handleSaveTask(values: TaskFormValues) {
-    setSaving(true)
-    const result = await saveTask(values, auth)
-    setSaving(false)
-
-    if (result.error) {
-      return result
-    }
-
-    await loadRegistration()
-    setIsTaskFormOpen(false)
-    return result
-  }
+    void loadPayment()
+  }, [auth, loadPayment])
 
   async function handleSavePayment(
     values: PaymentFormValues,
@@ -256,69 +182,104 @@ export function RegistrationDetailPage() {
       return result
     }
 
-    await loadRegistration()
-    setIsPaymentFormOpen(false)
+    await loadPayment()
+    return result
+  }
+
+  async function handleCollectPayment(
+    currentPayment: PaymentRecord,
+    values: CollectPaymentValues,
+  ) {
+    setSaving(true)
+    const result = await collectPayment(currentPayment, values, auth)
+    setSaving(false)
+
+    if (result.error) {
+      return result
+    }
+
+    await loadPayment()
+    return result
+  }
+
+  async function handleSaveTask(values: TaskFormValues) {
+    setSaving(true)
+    const result = await saveTask(values, auth)
+    setSaving(false)
+
+    if (result.error) {
+      return result
+    }
+
+    await loadPayment()
+    setIsTaskFormOpen(false)
     return result
   }
 
   if (loading) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm font-medium text-neutral-600 shadow-sm">
-        Kayıt detayı yükleniyor...
+        Ödeme detayı yükleniyor...
       </div>
     )
   }
 
-  if (error || !registration) {
+  if (error || !payment) {
     return (
       <div className="space-y-4">
         <Link
-          to="/registrations"
+          to="/payments"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Kayıt listesine dön
+          Ödeme listesine dön
         </Link>
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-          {error ?? 'Kayıt detayı bulunamadı.'}
+          {error ?? 'Ödeme detayı bulunamadı.'}
         </div>
       </div>
     )
   }
 
-  const parent = getRegistrationParent(registration)
-  const student = getRegistrationStudent(registration)
-  const program = getRegistrationProgram(registration)
-  const selectedTemplate = registrationReferences.whatsappTemplates.find(
+  const parent = getPaymentParentRecord(payment)
+  const student = getPaymentStudent(payment)
+  const program = getPaymentProgram(payment)
+  const registration = getPaymentRegistration(payment)
+  const selectedTemplate = paymentReferences.whatsappTemplates.find(
     (template) => template.id === selectedTemplateId,
   )
   const whatsappUrl = getWhatsAppUrl(
     parent?.phone ?? '',
-    buildWhatsAppMessage(selectedTemplate?.message, registration),
+    buildPaymentWhatsAppMessage(selectedTemplate?.message, payment),
   )
-  const existingPayment = registration.payments?.[0] ?? null
+  const paidInstallments = payment.installments?.filter(
+    (installment) => installment.status === 'odendi',
+  ).length
+  const overdueInstallments = payment.installments?.filter(
+    (installment) => installment.status === 'gecikti',
+  ).length
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
-            to="/registrations"
+            to="/payments"
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Kayıt listesine dön
+            Ödeme listesine dön
           </Link>
           <p className="mt-5 text-sm font-medium text-emerald-700">
-            Kayıt Detayı
+            Ödeme Detayı
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-neutral-950 sm:text-3xl">
-            {student?.full_name ?? 'Öğrenci yok'} · {program?.name ?? 'Program yok'}
+            {parent?.full_name ?? 'Veli yok'} · {program?.name ?? 'Program yok'}
           </h1>
           <p className="mt-2 text-sm text-neutral-500">
-            {parent?.full_name ?? 'Veli yok'} ·{' '}
-            {registration.status
-              ? registrationStatusLabels[registration.status]
+            {student?.full_name ?? 'Öğrenci yok'} ·{' '}
+            {payment.payment_status
+              ? paymentStatusLabels[payment.payment_status]
               : '-'}
           </p>
         </div>
@@ -326,31 +287,25 @@ export function RegistrationDetailPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => setIsRegistrationFormOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+            disabled={!isAdmin}
+            onClick={() => {
+              setSelectedInstallment(getFirstCollectableInstallment(payment))
+              setIsCollectOpen(true)
+            }}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
+          >
+            <Banknote className="h-4 w-4" aria-hidden="true" />
+            Tahsilat
+          </button>
+          <button
+            type="button"
+            disabled={!isAdmin}
+            onClick={() => setIsPaymentFormOpen(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-40"
           >
             <UserPen className="h-4 w-4" aria-hidden="true" />
             Düzenle
           </button>
-          {existingPayment ? (
-            <Link
-              to={`/payments/${existingPayment.id}`}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
-            >
-              <CreditCard className="h-4 w-4" aria-hidden="true" />
-              Ödeme Detayı
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsPaymentFormOpen(true)}
-              disabled={!isAdmin}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CreditCard className="h-4 w-4" aria-hidden="true" />
-              Ödeme Ekle
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setIsTaskFormOpen(true)}
@@ -360,7 +315,7 @@ export function RegistrationDetailPage() {
             Görev
           </button>
           <a
-            href="#registration-notes"
+            href="#payment-notes"
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             <NotebookPen className="h-4 w-4" aria-hidden="true" />
@@ -390,7 +345,7 @@ export function RegistrationDetailPage() {
             className="mt-2 h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           >
             <option value="">Şablon seçilmedi</option>
-            {registrationReferences.whatsappTemplates.map((template) => (
+            {paymentReferences.whatsappTemplates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.title}
               </option>
@@ -399,15 +354,44 @@ export function RegistrationDetailPage() {
         </label>
       </section>
 
+      <PaymentSummary
+        items={[
+          { label: 'Toplam tutar', value: formatCurrency(payment.total_amount) },
+          { label: 'Toplam ödenen', value: formatCurrency(payment.paid_amount) },
+          { label: 'Kalan tutar', value: formatCurrency(payment.remaining_amount) },
+          { label: 'Toplam taksit', value: payment.installment_count ?? 0 },
+          { label: 'Ödenen taksit', value: paidInstallments ?? 0 },
+          { label: 'Geciken taksit', value: overdueInstallments ?? 0 },
+          { label: 'En yakın ödeme', value: payment.nearest_due_date ?? '-' },
+          { label: 'Geciken tutar', value: formatCurrency(payment.overdue_amount) },
+        ]}
+      />
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DetailField label="Veli" value={parent?.full_name} />
         <DetailField label="Öğrenci" value={student?.full_name} />
         <DetailField label="Program" value={program?.name} />
-        <DetailField label="Kayıt tarihi" value={registration.registration_date} />
-        <DetailField label="Toplam fiyat" value={formatCurrency(registration.total_price)} />
-        <DetailField label="İndirim" value={formatCurrency(registration.discount_amount)} />
-        <DetailField label="Net fiyat" value={formatCurrency(registration.final_price)} />
-        <DetailField label="Kalan ödeme" value={formatCurrency(registration.remaining_amount)} />
+        <DetailField
+          label="Kayıt"
+          value={
+            registration?.status
+              ? registrationStatusLabels[registration.status]
+              : registration?.id
+          }
+        />
+        <DetailField
+          label="Ödeme yöntemi"
+          value={
+            payment.payment_method
+              ? paymentMethodLabels[payment.payment_method]
+              : null
+          }
+        />
+        <DetailField label="Ödeme tarihi" value={payment.payment_date} />
+        <DetailField
+          label="Oluşturulma"
+          value={formatNullableDateTime(payment.created_at)}
+        />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -421,12 +405,13 @@ export function RegistrationDetailPage() {
           </p>
         </Link>
         <Link
-          to={student ? `/students/${student.id}` : '#'}
+          to={registration ? `/registrations/${registration.id}` : '#'}
           className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm hover:bg-neutral-50"
         >
-          <h2 className="text-base font-semibold text-neutral-950">Öğrenci</h2>
+          <h2 className="text-base font-semibold text-neutral-950">Kayıt</h2>
           <p className="mt-2 text-sm text-neutral-600">
-            {student?.full_name ?? '-'} · {student?.school ?? 'Okul yok'}
+            {registration?.registration_date ?? '-'} ·{' '}
+            {formatCurrency(registration?.final_price)}
           </p>
         </Link>
         <Link
@@ -440,49 +425,26 @@ export function RegistrationDetailPage() {
         </Link>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-neutral-950">
-            Ödeme Listesi
-          </h2>
-          <div className="mt-4 divide-y divide-neutral-200">
-            {registration.payments && registration.payments.length > 0 ? (
-              registration.payments.map((payment) => (
-                <Link
-                  key={payment.id}
-                  to={`/payments/${payment.id}`}
-                  className="block py-3 first:pt-0 last:pb-0 hover:bg-neutral-50"
-                >
-                  <p className="text-sm font-semibold text-neutral-950">
-                    {formatCurrency(payment.total_amount)}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    Kalan {formatCurrency(payment.remaining_amount)} ·{' '}
-                    {payment.payment_status
-                      ? paymentStatusLabels[payment.payment_status]
-                      : '-'}
-                  </p>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm text-neutral-500">Ödeme bulunmuyor.</p>
-            )}
-          </div>
-          {existingPayment?.installments && existingPayment.installments.length > 0 ? (
-            <div className="mt-5">
-              <InstallmentsTable
-                canCollect={false}
-                installments={existingPayment.installments}
-              />
-            </div>
-          ) : null}
-        </div>
+      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold text-neutral-950">
+          Taksit Listesi
+        </h2>
+        <InstallmentsTable
+          canCollect={isAdmin}
+          installments={payment.installments ?? []}
+          onCollect={(installment) => {
+            setSelectedInstallment(installment)
+            setIsCollectOpen(true)
+          }}
+        />
+      </section>
 
+      <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
           <h2 className="text-base font-semibold text-neutral-950">Görevler</h2>
           <div className="mt-4 divide-y divide-neutral-200">
-            {registration.tasks && registration.tasks.length > 0 ? (
-              registration.tasks.map((task) => (
+            {payment.tasks && payment.tasks.length > 0 ? (
+              payment.tasks.map((task) => (
                 <article key={task.id} className="py-3 first:pt-0 last:pb-0">
                   <p className="text-sm font-semibold text-neutral-950">
                     {task.title}
@@ -494,44 +456,40 @@ export function RegistrationDetailPage() {
                 </article>
               ))
             ) : (
-              <p className="text-sm text-neutral-500">
-                Bu kayda bağlı veli görevleri bulunmuyor.
-              </p>
+              <p className="text-sm text-neutral-500">Görev bulunmuyor.</p>
             )}
           </div>
         </div>
+
+        <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+          <h2 className="text-base font-semibold text-neutral-950">Notlar</h2>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
+            {payment.notes || '-'}
+          </p>
+        </div>
       </section>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-        <h2 className="text-base font-semibold text-neutral-950">Notlar</h2>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-700">
-          {registration.notes || '-'}
-        </p>
-      </section>
-
-      <div id="registration-notes">
-        <NotesSection entityId={registration.id} entityType="registration" />
+      <div id="payment-notes">
+        <NotesSection entityId={payment.id} entityType="payment" />
       </div>
 
-      <RegistrationForm
-        editingRegistration={registration}
-        isAdmin={isAdmin}
-        isOpen={isRegistrationFormOpen}
-        references={registrationReferences}
-        saving={saving}
-        onClose={() => setIsRegistrationFormOpen(false)}
-        onSubmit={handleSaveRegistration}
-      />
-
       <PaymentForm
-        editingPayment={null}
-        initialRegistrationId={registration.id}
+        editingPayment={payment}
         isAdmin={isAdmin}
         isOpen={isPaymentFormOpen}
         references={paymentReferences}
         saving={saving}
         onClose={() => setIsPaymentFormOpen(false)}
         onSubmit={handleSavePayment}
+      />
+
+      <CollectPaymentModal
+        installment={selectedInstallment}
+        isOpen={isCollectOpen}
+        payment={payment}
+        saving={saving}
+        onClose={() => setIsCollectOpen(false)}
+        onSubmit={handleCollectPayment}
       />
 
       <TaskForm

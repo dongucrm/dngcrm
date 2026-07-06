@@ -4,6 +4,7 @@ import type {
   Parent,
   ParentFormData,
   Payment,
+  PaymentInstallment,
   PaymentStatus,
   Program,
   Registration,
@@ -31,7 +32,9 @@ export type ParentPayment = Pick<
   | 'due_date'
   | 'payment_date'
   | 'created_at'
->
+> & {
+  installments?: PaymentInstallment[] | null
+}
 
 export type ParentCallLog = Pick<
   CallLog,

@@ -39,6 +39,12 @@ export type PaymentStatus =
   | 'odendi'
   | 'gecikti'
   | 'iptal'
+export type PaymentInstallmentStatus =
+  | 'bekliyor'
+  | 'kismi_odendi'
+  | 'odendi'
+  | 'gecikti'
+  | 'iptal'
 export type PaymentMethod =
   | 'nakit'
   | 'kredi_karti'
@@ -169,6 +175,21 @@ export type Payment = {
   created_at: Timestamp | null
 }
 
+export type PaymentInstallment = {
+  id: DatabaseId
+  payment_id: DatabaseId | null
+  installment_no: number | null
+  amount: number | null
+  paid_amount: number | null
+  remaining_amount: number | null
+  due_date: DateString | null
+  paid_date: DateString | null
+  status: PaymentInstallmentStatus | null
+  notes: string | null
+  created_at: Timestamp | null
+  updated_at: Timestamp | null
+}
+
 export type CallLog = {
   id: DatabaseId
   lead_id: DatabaseId | null
@@ -297,6 +318,7 @@ export type PaymentFormData = {
   payment_method?: PaymentMethod
   installment_count: number
   payment_status: PaymentStatus
+  first_due_date?: DateString
   due_date?: DateString
   payment_date?: DateString
   notes?: string

@@ -2,6 +2,7 @@ import type {
   DatabaseId,
   Parent,
   Payment,
+  PaymentInstallment,
   Program,
   Registration,
   RegistrationFormData,
@@ -39,7 +40,9 @@ export type RegistrationPayment = Pick<
   | 'due_date'
   | 'payment_date'
   | 'created_at'
->
+> & {
+  installments?: PaymentInstallment[] | null
+}
 
 export type RegistrationTask = Pick<
   Task,

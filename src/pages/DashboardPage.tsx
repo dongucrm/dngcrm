@@ -3,6 +3,7 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   GraduationCap,
   PhoneCall,
   TrendingUp,
@@ -15,6 +16,13 @@ import { fetchDashboardCallMetrics } from '../features/calls/services/callLogSer
 import type { CallDashboardMetrics } from '../features/calls/types'
 import { fetchParentDashboardMetrics } from '../features/parents/services/parentService'
 import type { ParentDashboardMetrics } from '../features/parents/types'
+import {
+  fetchPaymentDashboardMetrics,
+  getPaymentParentRecord,
+  getPaymentProgram,
+  getPaymentStudent,
+} from '../features/payments/services/paymentService'
+import type { PaymentDashboardMetrics } from '../features/payments/types'
 import { fetchProgramDashboardMetrics } from '../features/programs/services/programService'
 import type { ProgramDashboardMetrics } from '../features/programs/types'
 import { TodayTasksWidget } from '../features/tasks/components/TodayTasksWidget'
@@ -59,12 +67,31 @@ const emptyProgramMetrics: ProgramDashboardMetrics = {
   totalRegistrations: 0,
 }
 
+const emptyPaymentMetrics: PaymentDashboardMetrics = {
+  collectedThisMonth: 0,
+  overdueAmount: 0,
+  overduePayments: [],
+  remainingAmount: 0,
+  todayDueCount: 0,
+  todayDuePayments: [],
+  totalCollected: 0,
+  totalExpected: 0,
+}
+
 function normalizeRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null
   }
 
   return value ?? null
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('tr-TR', {
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+    style: 'currency',
+  }).format(value)
 }
 
 export function DashboardPage() {
@@ -83,6 +110,7 @@ export function DashboardPage() {
   const [taskMetrics, setTaskMetrics] = useState(emptyTaskMetrics)
   const [parentMetrics, setParentMetrics] = useState(emptyParentMetrics)
   const [programMetrics, setProgramMetrics] = useState(emptyProgramMetrics)
+  const [paymentMetrics, setPaymentMetrics] = useState(emptyPaymentMetrics)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -95,11 +123,13 @@ export function DashboardPage() {
         nextTaskMetrics,
         nextParentMetrics,
         nextProgramMetrics,
+        nextPaymentMetrics,
       ] = await Promise.all([
         fetchDashboardCallMetrics(authContext),
         fetchTaskDashboardMetrics(authContext),
         fetchParentDashboardMetrics(),
         fetchProgramDashboardMetrics(),
+        fetchPaymentDashboardMetrics(),
       ])
 
       if (!isMounted) {
@@ -110,6 +140,7 @@ export function DashboardPage() {
       setTaskMetrics(nextTaskMetrics)
       setParentMetrics(nextParentMetrics)
       setProgramMetrics(nextProgramMetrics)
+      setPaymentMetrics(nextPaymentMetrics)
       setLoading(false)
     }
 
@@ -268,6 +299,45 @@ export function DashboardPage() {
     },
   ]
 
+  const paymentStats = [
+    {
+      detail: 'Olusturulan odeme planlarinin toplam tutari',
+      icon: CreditCard,
+      label: 'Toplam plan',
+      value: formatCurrency(paymentMetrics.totalExpected),
+    },
+    {
+      detail: 'Toplam tahsil edilen tutar',
+      icon: CheckCircle2,
+      label: 'Tahsil edilen',
+      value: formatCurrency(paymentMetrics.totalCollected),
+    },
+    {
+      detail: 'Tahsil edilmesi beklenen kalan tutar',
+      icon: CreditCard,
+      label: 'Kalan odeme',
+      value: formatCurrency(paymentMetrics.remainingAmount),
+    },
+    {
+      detail: 'Vadesi gecmis taksit toplam tutari',
+      icon: AlertCircle,
+      label: 'Geciken tutar',
+      value: formatCurrency(paymentMetrics.overdueAmount),
+    },
+    {
+      detail: 'Bugun vadesi gelen odeme sayisi',
+      icon: TrendingUp,
+      label: 'Bugun vade',
+      value: String(paymentMetrics.todayDueCount),
+    },
+    {
+      detail: 'Bu ay tahsil edilen tutar',
+      icon: CheckCircle2,
+      label: 'Bu ay tahsilat',
+      value: formatCurrency(paymentMetrics.collectedThisMonth),
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -319,6 +389,89 @@ export function DashboardPage() {
               {programStats.map((stat) => (
                 <StatCard key={stat.label} {...stat} />
               ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-neutral-950">
+              Odeme Ozeti
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {paymentStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </div>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-neutral-950">
+                Geciken Odemeler
+              </h2>
+              <div className="mt-4 divide-y divide-neutral-200">
+                {paymentMetrics.overduePayments.length > 0 ? (
+                  paymentMetrics.overduePayments.map((payment) => {
+                    const parent = getPaymentParentRecord(payment)
+                    const student = getPaymentStudent(payment)
+                    const program = getPaymentProgram(payment)
+
+                    return (
+                      <article
+                        key={payment.id}
+                        className="py-3 first:pt-0 last:pb-0"
+                      >
+                        <p className="text-sm font-semibold text-neutral-950">
+                          {parent?.full_name ?? 'Veli yok'}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {student?.full_name ?? 'Ogrenci yok'} ·{' '}
+                          {program?.name ?? 'Program yok'} ·{' '}
+                          {formatCurrency(payment.overdue_amount)}
+                        </p>
+                      </article>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Geciken odeme bulunmuyor.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-neutral-950">
+                Bugun Vadesi Gelenler
+              </h2>
+              <div className="mt-4 divide-y divide-neutral-200">
+                {paymentMetrics.todayDuePayments.length > 0 ? (
+                  paymentMetrics.todayDuePayments.map((payment) => {
+                    const parent = getPaymentParentRecord(payment)
+                    const student = getPaymentStudent(payment)
+                    const program = getPaymentProgram(payment)
+
+                    return (
+                      <article
+                        key={payment.id}
+                        className="py-3 first:pt-0 last:pb-0"
+                      >
+                        <p className="text-sm font-semibold text-neutral-950">
+                          {parent?.full_name ?? 'Veli yok'}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {student?.full_name ?? 'Ogrenci yok'} ·{' '}
+                          {program?.name ?? 'Program yok'} ·{' '}
+                          {formatCurrency(Number(payment.remaining_amount ?? 0))}
+                        </p>
+                      </article>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Bugun vadeli odeme bulunmuyor.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
 

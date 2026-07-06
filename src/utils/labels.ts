@@ -4,6 +4,7 @@ import type {
   LeadProbability,
   LeadStatus,
   PaymentMethod,
+  PaymentInstallmentStatus,
   PaymentStatus,
   ProgramType,
   RegistrationStatus,
@@ -56,6 +57,17 @@ export const registrationStatusLabels: Record<RegistrationStatus, string> = {
 
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   odenmedi: 'Ödenmedi',
+  kismi_odendi: 'Kısmi Ödendi',
+  odendi: 'Ödendi',
+  gecikti: 'Gecikti',
+  iptal: 'İptal',
+}
+
+export const paymentInstallmentStatusLabels: Record<
+  PaymentInstallmentStatus,
+  string
+> = {
+  bekliyor: 'Bekliyor',
   kismi_odendi: 'Kısmi Ödendi',
   odendi: 'Ödendi',
   gecikti: 'Gecikti',

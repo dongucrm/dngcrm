@@ -344,8 +344,9 @@ export function StudentDetailPage() {
           <div className="mt-4 space-y-3">
             {student.payments && student.payments.length > 0 ? (
               student.payments.map((payment) => (
-                <article
+                <Link
                   key={payment.id}
+                  to={`/payments/${payment.id}`}
                   className="rounded-lg border border-neutral-200 p-3"
                 >
                   <p className="font-semibold text-neutral-950">
@@ -358,7 +359,7 @@ export function StudentDetailPage() {
                       ? paymentStatusLabels[payment.payment_status]
                       : '-'}
                   </p>
-                </article>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-neutral-500">Ödeme bulunmuyor.</p>

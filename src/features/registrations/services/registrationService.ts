@@ -50,7 +50,10 @@ const registrationSelect = `
     payment_status,
     due_date,
     payment_date,
-    created_at
+    created_at,
+    installments:payment_installments (
+      *
+    )
   )
 `
 

@@ -10,6 +10,8 @@ import { LoginPage } from '../pages/LoginPage'
 import { ModulePlaceholderPage } from '../pages/ModulePlaceholderPage'
 import { ParentDetailPage } from '../pages/ParentDetailPage'
 import { ParentsPage } from '../pages/ParentsPage'
+import { PaymentDetailPage } from '../pages/PaymentDetailPage'
+import { PaymentsPage } from '../pages/PaymentsPage'
 import { ProgramDetailPage } from '../pages/ProgramDetailPage'
 import { ProgramsPage } from '../pages/ProgramsPage'
 import { RegistrationDetailPage } from '../pages/RegistrationDetailPage'
@@ -28,6 +30,7 @@ const programsMenuItem = menuItems.find((item) => item.id === 'programs')
 const registrationsMenuItem = menuItems.find(
   (item) => item.id === 'registrations',
 )
+const paymentsMenuItem = menuItems.find((item) => item.id === 'payments')
 const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
 const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
 const placeholderMenuItems = moduleMenuItems.filter(
@@ -37,6 +40,7 @@ const placeholderMenuItems = moduleMenuItems.filter(
     item.id !== 'students' &&
     item.id !== 'programs' &&
     item.id !== 'registrations' &&
+    item.id !== 'payments' &&
     item.id !== 'call-list' &&
     item.id !== 'tasks',
 )
@@ -189,6 +193,30 @@ export function AppRoutes() {
                 <ProtectedRoute>
                   <RoleBasedRoute allowedRoles={registrationsMenuItem.routeRoles}>
                     <RegistrationDetailPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+          </>
+        ) : null}
+        {paymentsMenuItem ? (
+          <>
+            <Route
+              path={getRoutePath(paymentsMenuItem.path)}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={paymentsMenuItem.routeRoles}>
+                    <PaymentsPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`${getRoutePath(paymentsMenuItem.path)}/:paymentId`}
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={paymentsMenuItem.routeRoles}>
+                    <PaymentDetailPage />
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }

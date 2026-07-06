@@ -84,7 +84,15 @@ function enrichStudent(
   paymentsByParent: Map<string, StudentRecord['payments']>,
 ): StudentRecord {
   const activeRegistration = getActiveRegistration(student)
-  const payments = paymentsByParent.get(student.parent_id ?? '') ?? []
+  const registrationIds = normalizeRelationArray(student.registrations).map(
+    (registration) => registration.id,
+  )
+  const payments = (paymentsByParent.get(student.parent_id ?? '') ?? []).filter(
+    (payment) =>
+      payment.registration_id
+        ? registrationIds.includes(payment.registration_id)
+        : false,
+  )
   const totalPaymentAmount = payments.reduce(
     (total, payment) => total + Number(payment.total_amount ?? 0),
     0,
@@ -184,7 +192,7 @@ async function fetchPaymentsForParents(parentIds: string[]) {
   const { data, error } = await supabase
     .from('payments')
     .select(
-      'id,parent_id,registration_id,total_amount,paid_amount,remaining_amount,payment_status,due_date,payment_date',
+      'id,parent_id,registration_id,total_amount,paid_amount,remaining_amount,payment_status,due_date,payment_date,installments:payment_installments(*)',
     )
     .in('parent_id', parentIds)
 

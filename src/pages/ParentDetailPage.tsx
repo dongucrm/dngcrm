@@ -362,6 +362,44 @@ export function ParentDetailPage() {
       id: parent.id,
       phone: parent.phone,
     }
+  const parentPayments = parent.payments ?? []
+  const paidPaymentAmount = parentPayments.reduce(
+    (total, payment) => total + Number(payment.paid_amount ?? 0),
+    0,
+  )
+  const today = new Date().toISOString().slice(0, 10)
+  const overduePaymentAmount = parentPayments.reduce((total, payment) => {
+    const installmentAmount = (payment.installments ?? [])
+      .filter((installment) => {
+        const dueDate = installment.due_date
+
+        return (
+          installment.status !== 'odendi' &&
+          installment.status !== 'iptal' &&
+          dueDate !== null &&
+          dueDate < today
+        )
+      })
+      .reduce(
+        (installmentTotal, installment) =>
+          installmentTotal + Number(installment.remaining_amount ?? 0),
+        0,
+      )
+
+    if (installmentAmount > 0) {
+      return total + installmentAmount
+    }
+
+    if (
+      payment.due_date &&
+      payment.due_date < today &&
+      Number(payment.remaining_amount ?? 0) > 0
+    ) {
+      return total + Number(payment.remaining_amount ?? 0)
+    }
+
+    return total
+  }, 0)
 
   return (
     <div className="space-y-6">
@@ -542,11 +580,35 @@ export function ParentDetailPage() {
             </h2>
             <CreditCard className="h-4 w-4 text-neutral-400" aria-hidden="true" />
           </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <DetailField
+              label="Toplam plan"
+              value={formatCurrency(parent.total_payment_amount)}
+            />
+            <DetailField
+              label="Odenen"
+              value={formatCurrency(paidPaymentAmount)}
+            />
+            <DetailField
+              label="Kalan"
+              value={formatCurrency(parent.remaining_payment_amount)}
+            />
+            <DetailField
+              label="Geciken"
+              value={formatCurrency(overduePaymentAmount)}
+            />
+          </div>
+          {overduePaymentAmount > 0 ? (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              Gecikmis odeme uyarisi: {formatCurrency(overduePaymentAmount)}
+            </div>
+          ) : null}
           <div className="mt-4 space-y-3">
             {parent.payments && parent.payments.length > 0 ? (
               parent.payments.map((payment) => (
-                <article
+                <Link
                   key={payment.id}
+                  to={`/payments/${payment.id}`}
                   className="rounded-lg border border-neutral-200 p-3"
                 >
                   <p className="font-semibold text-neutral-950">
@@ -559,7 +621,7 @@ export function ParentDetailPage() {
                       ? paymentStatusLabels[payment.payment_status]
                       : '-'}
                   </p>
-                </article>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-neutral-500">Ödeme bulunmuyor.</p>
