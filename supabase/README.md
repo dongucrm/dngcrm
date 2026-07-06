@@ -75,6 +75,14 @@ Payments / taksit ve tahsilat RLS guncellemesi icin:
 
 Bu migration tablo silmez ve veri kaybi olusturmaz. `payment_installments` tablosunu, taksit indexlerini, `updated_at` triggerini ve admin / satis personeli odeme RLS kurallarini ekler.
 
+WhatsApp sablonlari ve mesaj acma loglari guncellemesi icin:
+
+1. `supabase/migrations/020_whatsapp_templates_message_logs.sql` dosyasinin tamamini kopyalayin.
+2. Supabase SQL Editor icinde yeni bir query acin.
+3. Icerigi yapistirip Run butonuna basin.
+
+Bu migration tablo silmez ve veri kaybi olusturmaz. `whatsapp_message_logs` tablosunu, WhatsApp sablon/log indexlerini ve admin / satis personeli RLS kurallarini ekler.
+
 ## 6. Project URL ve Publishable Key Alma
 
 1. Supabase Dashboard icinde Project Settings ekranina girin.

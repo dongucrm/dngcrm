@@ -173,6 +173,17 @@ create table if not exists public.whatsapp_templates (
   created_at timestamptz default now()
 );
 
+create table if not exists public.whatsapp_message_logs (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid references public.whatsapp_templates(id) on delete set null,
+  entity_type text,
+  entity_id uuid,
+  phone text,
+  message text,
+  user_id uuid references public.profiles(id),
+  opened_at timestamptz default now()
+);
+
 create table if not exists public.notes (
   id uuid primary key default gen_random_uuid(),
   entity_type text not null,
@@ -523,6 +534,12 @@ create index if not exists idx_tasks_due_date on public.tasks(due_date);
 
 create index if not exists idx_whatsapp_templates_category on public.whatsapp_templates(category);
 create index if not exists idx_whatsapp_templates_is_active on public.whatsapp_templates(is_active);
+create index if not exists idx_whatsapp_templates_created_at on public.whatsapp_templates(created_at);
+
+create index if not exists idx_whatsapp_message_logs_template_id on public.whatsapp_message_logs(template_id);
+create index if not exists idx_whatsapp_message_logs_entity on public.whatsapp_message_logs(entity_type, entity_id);
+create index if not exists idx_whatsapp_message_logs_user_id on public.whatsapp_message_logs(user_id);
+create index if not exists idx_whatsapp_message_logs_opened_at on public.whatsapp_message_logs(opened_at);
 
 create index if not exists idx_notes_entity on public.notes(entity_type, entity_id);
 create index if not exists idx_notes_user_id on public.notes(user_id);
@@ -544,6 +561,7 @@ alter table public.payment_installments enable row level security;
 alter table public.call_logs enable row level security;
 alter table public.tasks enable row level security;
 alter table public.whatsapp_templates enable row level security;
+alter table public.whatsapp_message_logs enable row level security;
 alter table public.notes enable row level security;
 alter table public.audit_logs enable row level security;
 
@@ -562,6 +580,7 @@ grant select, insert, update, delete on
   public.call_logs,
   public.tasks,
   public.whatsapp_templates,
+  public.whatsapp_message_logs,
   public.notes,
   public.audit_logs
 to authenticated;
@@ -976,6 +995,9 @@ with check (
 );
 
 drop policy if exists "admins_manage_whatsapp_templates" on public.whatsapp_templates;
+drop policy if exists "authenticated_read_active_whatsapp_templates" on public.whatsapp_templates;
+drop policy if exists "sales_read_active_whatsapp_templates" on public.whatsapp_templates;
+
 create policy "admins_manage_whatsapp_templates"
 on public.whatsapp_templates
 for all
@@ -983,12 +1005,43 @@ to authenticated
 using (public.is_admin())
 with check (public.is_admin());
 
-drop policy if exists "authenticated_read_active_whatsapp_templates" on public.whatsapp_templates;
-create policy "authenticated_read_active_whatsapp_templates"
+create policy "sales_read_active_whatsapp_templates"
 on public.whatsapp_templates
 for select
 to authenticated
-using (is_active = true);
+using (
+  public.is_sales()
+  and is_active = true
+);
+
+drop policy if exists "admins_manage_whatsapp_message_logs" on public.whatsapp_message_logs;
+drop policy if exists "sales_read_own_whatsapp_message_logs" on public.whatsapp_message_logs;
+drop policy if exists "sales_insert_own_whatsapp_message_logs" on public.whatsapp_message_logs;
+
+create policy "admins_manage_whatsapp_message_logs"
+on public.whatsapp_message_logs
+for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "sales_read_own_whatsapp_message_logs"
+on public.whatsapp_message_logs
+for select
+to authenticated
+using (
+  public.is_sales()
+  and user_id = auth.uid()
+);
+
+create policy "sales_insert_own_whatsapp_message_logs"
+on public.whatsapp_message_logs
+for insert
+to authenticated
+with check (
+  public.is_sales()
+  and user_id = auth.uid()
+);
 
 drop policy if exists "admins_manage_notes" on public.notes;
 drop policy if exists "sales_read_related_notes" on public.notes;

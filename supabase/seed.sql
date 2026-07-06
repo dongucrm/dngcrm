@@ -70,6 +70,47 @@ where not exists (
   where t.title = v.title
 );
 
+insert into public.whatsapp_templates (title, message, category)
+select v.title, v.message, v.category
+from (
+  values
+    (
+      'Lead Bilgi Mesaji',
+      'Merhaba {{veli_adi}}, {{ogrenci_adi}} icin {{program_adi}} hakkinda bilgi almak istediginizi gorduk. Size yardimci olmaktan memnuniyet duyariz.',
+      'lead'
+    ),
+    (
+      'Deneme Dersi Hatirlatma',
+      'Merhaba {{veli_adi}}, {{ogrenci_adi}} icin planlanan deneme dersimizi hatirlatmak isteriz. Katilim durumunuzu bizimle paylasabilir misiniz?',
+      'deneme_dersi'
+    ),
+    (
+      'Kayit Bilgilendirme',
+      'Merhaba {{veli_adi}}, {{ogrenci_adi}} icin {{program_adi}} kayit sureciniz olusturulmustur. Detayli bilgi icin bizimle iletisime gecebilirsiniz.',
+      'kayit'
+    ),
+    (
+      'Odeme Hatirlatma',
+      'Merhaba {{veli_adi}}, {{ogrenci_adi}} icin {{program_adi}} programina ait kalan odeme tutariniz {{kalan_tutar}} TL olarak gorunmektedir. Bilginize sunariz.',
+      'odeme'
+    ),
+    (
+      'Taksit Hatirlatma',
+      'Merhaba {{veli_adi}}, {{program_adi}} icin {{taksit_no}}. taksit vade tarihiniz {{vade_tarihi}} olarak gorunmektedir.',
+      'taksit'
+    ),
+    (
+      'Genel Tesekkur',
+      'Merhaba {{veli_adi}}, ilginiz icin tesekkur ederiz. Size en kisa surede yardimci olacagiz.',
+      'genel'
+    )
+) as v(title, message, category)
+where not exists (
+  select 1
+  from public.whatsapp_templates t
+  where t.title = v.title
+);
+
 insert into public.parents (full_name, phone, email, address, notes)
 select v.full_name, v.phone, v.email, v.address, v.notes
 from (
