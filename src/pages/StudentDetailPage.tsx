@@ -1,4 +1,11 @@
-import { ArrowLeft, FilePlus2, NotebookPen, UserPen, UsersRound } from 'lucide-react'
+import {
+  ArrowLeft,
+  FilePlus2,
+  MessageCircle,
+  NotebookPen,
+  UserPen,
+  UsersRound,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { NotesSection } from '../features/notes/components/NotesSection'
@@ -25,6 +32,7 @@ import type {
   StudentRecord,
   StudentReferences,
 } from '../features/students/types'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
@@ -101,6 +109,7 @@ export function StudentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   usePageTitle(student ? `${student.full_name} Öğrenci Detayı` : 'Öğrenci Detayı')
 
@@ -265,6 +274,30 @@ export function StudentDetailPage() {
             <NotebookPen className="h-4 w-4" aria-hidden="true" />
             Not Ekle
           </a>
+          <button
+            type="button"
+            disabled={!parent?.phone}
+            onClick={() =>
+              parent &&
+              openWhatsAppMessage({
+                defaultCategory: 'ogrenci',
+                entityId: student.id,
+                entityType: 'student',
+                name: parent.full_name,
+                phone: parent.phone,
+                variables: {
+                  ogrenci_adi: student.full_name,
+                  ogrenci_yasi: student.age,
+                  veli_adi: parent.full_name,
+                  veli_telefonu: parent.phone,
+                },
+              })
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            WhatsApp
+          </button>
         </div>
       </div>
 

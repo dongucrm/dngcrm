@@ -1,10 +1,8 @@
 import { ListChecks, MessageCircle, PhoneCall } from 'lucide-react'
 import { formatNullableDateTime } from '../../../utils/date'
 import { callStatusLabels } from '../../../utils/labels'
-import {
-  formatPhoneForDisplay,
-  getWhatsAppUrl,
-} from '../../../utils/phone'
+import { formatPhoneForDisplay } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import { getCallTargetProgram } from '../services/callLogService'
 import type { CallTargetRecord } from '../types'
 
@@ -20,7 +18,7 @@ export function CallLogCard({
   target,
 }: CallLogCardProps) {
   const program = getCallTargetProgram(target)
-  const whatsappUrl = getWhatsAppUrl(target.phone)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   return (
     <article className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -66,16 +64,31 @@ export function CallLogCard({
       </dl>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <a
-          href={whatsappUrl ?? undefined}
-          target="_blank"
-          rel="noreferrer"
-          aria-disabled={!whatsappUrl}
+        <button
+          type="button"
+          onClick={() =>
+            openWhatsAppMessage({
+              defaultCategory: 'lead',
+              entityId: target.id,
+              entityType: 'lead',
+              name: target.full_name,
+              phone: target.phone,
+              variables: {
+                cocuk_adi: target.child_name,
+                cocuk_yasi: target.child_age,
+                kaynak: target.source,
+                program_adi: program?.name,
+                sonraki_arama_tarihi: target.next_call_date,
+                telefon: target.phone,
+                veli_adi: target.full_name,
+              },
+            })
+          }
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
           WhatsApp
-        </a>
+        </button>
         <button
           type="button"
           onClick={() => onAddCall(target)}

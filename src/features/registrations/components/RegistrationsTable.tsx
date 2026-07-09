@@ -1,7 +1,7 @@
 import { Eye, MessageCircle, UserPen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { registrationStatusLabels } from '../../../utils/labels'
-import { getWhatsAppUrl } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getRegistrationParent,
   getRegistrationProgram,
@@ -26,6 +26,8 @@ export function RegistrationsTable({
   onEdit,
   registrations,
 }: RegistrationsTableProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <div className="hidden overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:block">
       <table className="min-w-full divide-y divide-neutral-200 text-sm">
@@ -46,7 +48,6 @@ export function RegistrationsTable({
             const parent = getRegistrationParent(registration)
             const student = getRegistrationStudent(registration)
             const program = getRegistrationProgram(registration)
-            const whatsappUrl = getWhatsAppUrl(parent?.phone ?? '')
 
             return (
               <tr key={registration.id} className="hover:bg-neutral-50">
@@ -97,16 +98,37 @@ export function RegistrationsTable({
                     >
                       <UserPen className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <a
-                      href={whatsappUrl ?? undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-disabled={!whatsappUrl}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        parent &&
+                        openWhatsAppMessage({
+                          defaultCategory: 'kayit',
+                          entityId: registration.id,
+                          entityType: 'registration',
+                          name: parent.full_name,
+                          phone: parent.phone,
+                          variables: {
+                            kalan_odeme: formatCurrency(
+                              registration.remaining_amount,
+                            ),
+                            kayit_durumu: registration.status
+                              ? registrationStatusLabels[registration.status]
+                              : '',
+                            kayit_tarihi: registration.registration_date,
+                            net_fiyat: formatCurrency(registration.final_price),
+                            ogrenci_adi: student?.full_name,
+                            program_adi: program?.name,
+                            veli_adi: parent.full_name,
+                          },
+                        })
+                      }
+                      disabled={!parent?.phone}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 hover:bg-white aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       aria-label="WhatsApp"
                     >
                       <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    </a>
+                    </button>
                   </div>
                 </td>
               </tr>

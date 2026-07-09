@@ -1,7 +1,8 @@
 import { ExternalLink, GraduationCap, ListChecks, MessageCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatNullableDateTime } from '../../../utils/date'
-import { formatPhoneForDisplay, getWhatsAppUrl } from '../../../utils/phone'
+import { formatPhoneForDisplay } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import type { ParentRecord } from '../types'
 
 type ParentCardProps = {
@@ -15,7 +16,8 @@ export function ParentCard({
   onCreateTask,
   parent,
 }: ParentCardProps) {
-  const whatsappUrl = getWhatsAppUrl(parent.phone)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+  const firstStudent = parent.students?.[0]
 
   return (
     <article className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -56,16 +58,28 @@ export function ParentCard({
           <ExternalLink className="h-4 w-4" aria-hidden="true" />
           Detay
         </Link>
-        <a
-          href={whatsappUrl ?? undefined}
-          target="_blank"
-          rel="noreferrer"
-          aria-disabled={!whatsappUrl}
+        <button
+          type="button"
+          onClick={() =>
+            openWhatsAppMessage({
+              defaultCategory: 'veli',
+              entityId: parent.id,
+              entityType: 'parent',
+              name: parent.full_name,
+              phone: parent.phone,
+              variables: {
+                ogrenci_adi: firstStudent?.full_name,
+                ogrenci_yasi: firstStudent?.age,
+                veli_adi: parent.full_name,
+                veli_telefonu: parent.phone,
+              },
+            })
+          }
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
           WhatsApp
-        </a>
+        </button>
         <button
           type="button"
           onClick={() => onAddStudent(parent)}

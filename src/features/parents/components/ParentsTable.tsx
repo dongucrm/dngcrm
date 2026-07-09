@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatNullableDateTime } from '../../../utils/date'
-import { formatPhoneForDisplay, getWhatsAppUrl } from '../../../utils/phone'
+import { formatPhoneForDisplay } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import type { ParentRecord } from '../types'
 
 type ParentsTableProps = {
@@ -32,6 +33,8 @@ export function ParentsTable({
   onEdit,
   parents,
 }: ParentsTableProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <section className="hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:block">
       <div className="overflow-x-auto">
@@ -59,7 +62,7 @@ export function ParentsTable({
           </thead>
           <tbody className="divide-y divide-neutral-200">
             {parents.map((parent) => {
-              const whatsappUrl = getWhatsAppUrl(parent.phone)
+              const firstStudent = parent.students?.[0]
 
               return (
                 <tr key={parent.id} className="hover:bg-neutral-50">
@@ -109,11 +112,23 @@ export function ParentsTable({
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                         Düzenle
                       </button>
-                      <a
-                        href={whatsappUrl ?? undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-disabled={!whatsappUrl}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsAppMessage({
+                            defaultCategory: 'veli',
+                            entityId: parent.id,
+                            entityType: 'parent',
+                            name: parent.full_name,
+                            phone: parent.phone,
+                            variables: {
+                              ogrenci_adi: firstStudent?.full_name,
+                              ogrenci_yasi: firstStudent?.age,
+                              veli_adi: parent.full_name,
+                              veli_telefonu: parent.phone,
+                            },
+                          })
+                        }
                         className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       >
                         <MessageCircle
@@ -121,7 +136,7 @@ export function ParentsTable({
                           aria-hidden="true"
                         />
                         WhatsApp
-                      </a>
+                      </button>
                       <button
                         type="button"
                         onClick={() => onAddStudent(parent)}

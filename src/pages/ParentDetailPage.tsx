@@ -62,6 +62,7 @@ import type {
   TaskFormValues,
   TaskReferences,
 } from '../features/tasks/types'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
@@ -72,7 +73,7 @@ import {
   registrationStatusLabels,
   taskStatusLabels,
 } from '../utils/labels'
-import { formatPhoneForDisplay, getWhatsAppUrl } from '../utils/phone'
+import { formatPhoneForDisplay } from '../utils/phone'
 
 const emptyParentReferences: ParentReferences = {
   programs: [],
@@ -163,7 +164,6 @@ export function ParentDetailPage() {
     useState<CallReferences>(emptyCallReferences)
   const [registrationReferences, setRegistrationReferences] =
     useState<RegistrationReferences>(emptyRegistrationReferences)
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isParentFormOpen, setIsParentFormOpen] = useState(false)
   const [isStudentFormOpen, setIsStudentFormOpen] = useState(false)
   const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false)
@@ -172,6 +172,7 @@ export function ParentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   usePageTitle(parent ? `${parent.full_name} Veli Detayı` : 'Veli Detayı')
 
@@ -345,16 +346,7 @@ export function ParentDetailPage() {
     )
   }
 
-  const selectedTemplate = parentReferences.whatsappTemplates.find(
-    (template) => template.id === selectedTemplateId,
-  )
   const firstStudent = parent.students?.[0]
-  const whatsappMessage = selectedTemplate?.message
-    .replaceAll('{{veli_adi}}', parent.full_name)
-    .replaceAll('{{ogrenci_adi}}', firstStudent?.full_name ?? '')
-    .replaceAll('{veli_adi}', parent.full_name)
-    .replaceAll('{ogrenci_adi}', firstStudent?.full_name ?? '')
-  const whatsappUrl = getWhatsAppUrl(parent.phone, whatsappMessage)
   const initialCallParent =
     callReferences.parents.find((callParent) => callParent.id === parent.id) ?? {
       email: parent.email,
@@ -456,27 +448,39 @@ export function ParentDetailPage() {
             <ListChecks className="h-4 w-4" aria-hidden="true" />
             Görev
           </button>
-          <a
-            href={whatsappUrl ?? undefined}
-            target="_blank"
-            rel="noreferrer"
-            aria-disabled={!whatsappUrl}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
+          <button
+            type="button"
+            onClick={() =>
+              openWhatsAppMessage({
+                defaultCategory: 'veli',
+                entityId: parent.id,
+                entityType: 'parent',
+                name: parent.full_name,
+                phone: parent.phone,
+                variables: {
+                  ogrenci_adi: firstStudent?.full_name,
+                  ogrenci_yasi: firstStudent?.age,
+                  veli_adi: parent.full_name,
+                  veli_telefonu: parent.phone,
+                },
+              })
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             WhatsApp
-          </a>
+          </button>
         </div>
       </div>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
+      <section className="hidden">
         <label className="block max-w-md">
           <span className="text-sm font-medium text-neutral-700">
             WhatsApp şablonu
           </span>
           <select
-            value={selectedTemplateId}
-            onChange={(event) => setSelectedTemplateId(event.target.value)}
+            value=""
+            onChange={() => undefined}
             className="mt-2 h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
           >
             <option value="">Şablon seçilmedi</option>

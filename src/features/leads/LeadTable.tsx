@@ -6,6 +6,7 @@ import {
   PhoneCall,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useWhatsAppMessage } from '../whatsapp/providers/WhatsAppMessageContext'
 import { leadProbabilityLabels } from '../../utils/labels'
 import { LeadPriorityBadge, LeadStatusBadge } from './LeadStatusBadge'
 import type { LeadQuickAction, LeadRecord } from './types'
@@ -14,7 +15,6 @@ import {
   formatPhoneForDisplay,
   getLeadAssignee,
   getLeadProgram,
-  getWhatsAppUrl,
 } from './utils'
 
 type LeadTableProps = {
@@ -35,6 +35,8 @@ function formatSource(source: string | null) {
 }
 
 export function LeadTable({ leads, onEdit, onQuickAction }: LeadTableProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <section className="hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:block">
       <div className="overflow-x-auto">
@@ -71,7 +73,6 @@ export function LeadTable({ leads, onEdit, onQuickAction }: LeadTableProps) {
             {leads.map((lead) => {
               const program = getLeadProgram(lead)
               const assignee = getLeadAssignee(lead)
-              const whatsappUrl = getWhatsAppUrl(lead.phone)
 
               return (
                 <tr key={lead.id} className="hover:bg-neutral-50">
@@ -125,11 +126,28 @@ export function LeadTable({ leads, onEdit, onQuickAction }: LeadTableProps) {
                         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                         Düzenle
                       </button>
-                      <a
-                        href={whatsappUrl ?? undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-disabled={!whatsappUrl}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsAppMessage({
+                            defaultCategory: 'lead',
+                            entityId: lead.id,
+                            entityType: 'lead',
+                            name: lead.full_name,
+                            phone: lead.phone,
+                            variables: {
+                              cocuk_adi: lead.child_name,
+                              cocuk_yasi: lead.child_age,
+                              kaynak: lead.source,
+                              program_adi: program?.name,
+                              sonraki_arama_tarihi: formatNullableDateTime(
+                                lead.next_call_date,
+                              ),
+                              telefon: lead.phone,
+                              veli_adi: lead.full_name,
+                            },
+                          })
+                        }
                         className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       >
                         <MessageCircle
@@ -137,7 +155,7 @@ export function LeadTable({ leads, onEdit, onQuickAction }: LeadTableProps) {
                           aria-hidden="true"
                         />
                         WhatsApp
-                      </a>
+                      </button>
                       <button
                         type="button"
                         onClick={() => onQuickAction({ type: 'call', lead })}

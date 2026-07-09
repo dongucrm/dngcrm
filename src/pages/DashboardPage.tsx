@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CreditCard,
   GraduationCap,
+  MessageCircle,
   PhoneCall,
   TrendingUp,
   UsersRound,
@@ -28,6 +29,8 @@ import type { ProgramDashboardMetrics } from '../features/programs/types'
 import { TodayTasksWidget } from '../features/tasks/components/TodayTasksWidget'
 import { fetchTaskDashboardMetrics } from '../features/tasks/services/taskService'
 import type { TaskDashboardMetrics } from '../features/tasks/types'
+import { fetchWhatsAppDashboardMetrics } from '../features/whatsapp/services/whatsappMessageLogService'
+import type { WhatsAppDashboardMetrics } from '../features/whatsapp/types'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -78,6 +81,13 @@ const emptyPaymentMetrics: PaymentDashboardMetrics = {
   totalExpected: 0,
 }
 
+const emptyWhatsAppMetrics: WhatsAppDashboardMetrics = {
+  passiveTemplateCount: 0,
+  todayOpenCount: 0,
+  topTemplateTitle: '-',
+  totalOpenCount: 0,
+}
+
 function normalizeRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) {
     return value[0] ?? null
@@ -111,6 +121,7 @@ export function DashboardPage() {
   const [parentMetrics, setParentMetrics] = useState(emptyParentMetrics)
   const [programMetrics, setProgramMetrics] = useState(emptyProgramMetrics)
   const [paymentMetrics, setPaymentMetrics] = useState(emptyPaymentMetrics)
+  const [whatsAppMetrics, setWhatsAppMetrics] = useState(emptyWhatsAppMetrics)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -124,12 +135,14 @@ export function DashboardPage() {
         nextParentMetrics,
         nextProgramMetrics,
         nextPaymentMetrics,
+        nextWhatsAppMetrics,
       ] = await Promise.all([
         fetchDashboardCallMetrics(authContext),
         fetchTaskDashboardMetrics(authContext),
         fetchParentDashboardMetrics(),
         fetchProgramDashboardMetrics(),
         fetchPaymentDashboardMetrics(),
+        fetchWhatsAppDashboardMetrics(),
       ])
 
       if (!isMounted) {
@@ -141,6 +154,7 @@ export function DashboardPage() {
       setParentMetrics(nextParentMetrics)
       setProgramMetrics(nextProgramMetrics)
       setPaymentMetrics(nextPaymentMetrics)
+      setWhatsAppMetrics(nextWhatsAppMetrics)
       setLoading(false)
     }
 
@@ -338,6 +352,33 @@ export function DashboardPage() {
     },
   ]
 
+  const whatsAppStats = [
+    {
+      detail: 'Bugun acilan WhatsApp mesaj sayisi',
+      icon: MessageCircle,
+      label: 'Bugun WhatsApp',
+      value: String(whatsAppMetrics.todayOpenCount),
+    },
+    {
+      detail: 'Toplam WhatsApp acma logu',
+      icon: MessageCircle,
+      label: 'Toplam WhatsApp',
+      value: String(whatsAppMetrics.totalOpenCount),
+    },
+    {
+      detail: 'En cok kullanilan mesaj sablonu',
+      icon: TrendingUp,
+      label: 'Populer sablon',
+      value: whatsAppMetrics.topTemplateTitle,
+    },
+    {
+      detail: 'Pasif durumdaki WhatsApp sablonlari',
+      icon: AlertCircle,
+      label: 'Pasif sablon',
+      value: String(whatsAppMetrics.passiveTemplateCount),
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <div>
@@ -398,6 +439,17 @@ export function DashboardPage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {paymentStats.map((stat) => (
+                <StatCard key={stat.label} {...stat} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-4 text-base font-semibold text-neutral-950">
+              WhatsApp Ozeti
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {whatsAppStats.map((stat) => (
                 <StatCard key={stat.label} {...stat} />
               ))}
             </div>

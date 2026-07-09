@@ -9,11 +9,12 @@ import { PaymentForm } from '../features/payments/components/PaymentForm'
 import { PaymentsTable } from '../features/payments/components/PaymentsTable'
 import { emptyPaymentFilters } from '../features/payments/constants'
 import {
-  buildPaymentWhatsAppMessage,
   collectPayment,
   fetchPaymentReferences,
   fetchPayments,
   getPaymentParentRecord,
+  getPaymentProgram,
+  getPaymentStudent,
   savePayment,
 } from '../features/payments/services/paymentService'
 import type {
@@ -33,9 +34,9 @@ import type {
   TaskFormValues,
   TaskReferences,
 } from '../features/tasks/types'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { getWhatsAppUrl } from '../utils/phone'
 
 const emptyReferences: PaymentReferences = {
   registrations: [],
@@ -57,6 +58,14 @@ function getFirstCollectableInstallment(payment: PaymentRecord) {
         Number(installment.remaining_amount ?? 0) > 0,
     ) ?? null
   )
+}
+
+function formatCurrency(value: number | null | undefined) {
+  return new Intl.NumberFormat('tr-TR', {
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+    style: 'currency',
+  }).format(Number(value ?? 0))
 }
 
 export function PaymentsPage() {
@@ -85,7 +94,6 @@ export function PaymentsPage() {
     useState<PaymentInstallment | null>(null)
   const [installmentPreview, setInstallmentPreview] =
     useState<PaymentRecord | null>(null)
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isCollectOpen, setIsCollectOpen] = useState(false)
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
@@ -93,6 +101,7 @@ export function PaymentsPage() {
   const [referencesLoading, setReferencesLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   const loadPayments = useCallback(async () => {
     setLoading(true)
@@ -169,16 +178,33 @@ export function PaymentsPage() {
     setIsTaskFormOpen(true)
   }
 
-  function getPaymentWhatsAppUrl(payment: PaymentRecord) {
-    const template = references.whatsappTemplates.find(
-      (item) => item.id === selectedTemplateId,
-    )
+  function openPaymentWhatsApp(payment: PaymentRecord) {
     const parent = getPaymentParentRecord(payment)
+    const student = getPaymentStudent(payment)
+    const program = getPaymentProgram(payment)
 
-    return getWhatsAppUrl(
-      parent?.phone ?? '',
-      buildPaymentWhatsAppMessage(template?.message, payment),
-    )
+    if (!parent) {
+      setError('WhatsApp için veli bilgisi bulunamadı.')
+      return
+    }
+
+    openWhatsAppMessage({
+      defaultCategory: 'odeme',
+      entityId: payment.id,
+      entityType: 'payment',
+      name: parent.full_name,
+      phone: parent.phone,
+      variables: {
+        en_yakin_odeme_tarihi: payment.nearest_due_date,
+        geciken_tutar: formatCurrency(payment.overdue_amount),
+        kalan_tutar: formatCurrency(Number(payment.remaining_amount ?? 0)),
+        odenen_tutar: formatCurrency(Number(payment.paid_amount ?? 0)),
+        ogrenci_adi: student?.full_name,
+        program_adi: program?.name,
+        toplam_tutar: formatCurrency(Number(payment.total_amount ?? 0)),
+        veli_adi: parent.full_name,
+      },
+    })
   }
 
   async function handleSavePayment(
@@ -265,26 +291,6 @@ export function PaymentsPage() {
         </div>
       </div>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <label className="block max-w-md">
-          <span className="text-sm font-medium text-neutral-700">
-            WhatsApp şablonu
-          </span>
-          <select
-            value={selectedTemplateId}
-            onChange={(event) => setSelectedTemplateId(event.target.value)}
-            className="mt-2 h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-          >
-            <option value="">Şablon seçilmedi</option>
-            {references.whatsappTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-
       <PaymentFilters
         filters={filters}
         references={references}
@@ -320,7 +326,7 @@ export function PaymentsPage() {
             onCreateTask={openTaskModal}
             onEdit={openEditModal}
             onShowInstallments={setInstallmentPreview}
-            onWhatsApp={getPaymentWhatsAppUrl}
+            onWhatsApp={openPaymentWhatsApp}
           />
           <div className="grid gap-3 xl:hidden">
             {payments.map((payment) => (
@@ -332,7 +338,7 @@ export function PaymentsPage() {
                 onCreateTask={openTaskModal}
                 onEdit={openEditModal}
                 onShowInstallments={setInstallmentPreview}
-                onWhatsApp={getPaymentWhatsAppUrl}
+                onWhatsApp={openPaymentWhatsApp}
               />
             ))}
           </div>

@@ -45,6 +45,7 @@ import type {
   TaskFormValues,
   TaskReferences,
 } from '../features/tasks/types'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
@@ -53,7 +54,6 @@ import {
   registrationStatusLabels,
   taskStatusLabels,
 } from '../utils/labels'
-import { getWhatsAppUrl } from '../utils/phone'
 
 const emptyRegistrationReferences: RegistrationReferences = {
   parents: [],
@@ -100,36 +100,6 @@ function DetailField({
   )
 }
 
-function buildWhatsAppMessage(
-  template: string | undefined,
-  registration: RegistrationRecord,
-) {
-  if (!template) {
-    return undefined
-  }
-
-  const parent = getRegistrationParent(registration)
-  const student = getRegistrationStudent(registration)
-  const program = getRegistrationProgram(registration)
-  const status = registration.status
-    ? registrationStatusLabels[registration.status]
-    : ''
-  const replacements = {
-    kalan_odeme: formatCurrency(registration.remaining_amount),
-    kayit_durumu: status,
-    net_fiyat: formatCurrency(registration.final_price),
-    ogrenci_adi: student?.full_name ?? '',
-    program_adi: program?.name ?? '',
-    veli_adi: parent?.full_name ?? '',
-  }
-
-  return Object.entries(replacements).reduce(
-    (message, [key, value]) =>
-      message.replaceAll(`{{${key}}}`, value).replaceAll(`{${key}}`, value),
-    template,
-  )
-}
-
 export function RegistrationDetailPage() {
   const { registrationId } = useParams()
   const { isAdmin, isSales, user } = useAuth()
@@ -150,13 +120,13 @@ export function RegistrationDetailPage() {
     useState<TaskReferences>(emptyTaskReferences)
   const [paymentReferences, setPaymentReferences] =
     useState<PaymentReferences>(emptyPaymentReferences)
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isRegistrationFormOpen, setIsRegistrationFormOpen] = useState(false)
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false)
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   usePageTitle(
     registration ? `${registration.id.slice(0, 8)} Kayıt Detayı` : 'Kayıt Detayı',
@@ -289,13 +259,6 @@ export function RegistrationDetailPage() {
   const parent = getRegistrationParent(registration)
   const student = getRegistrationStudent(registration)
   const program = getRegistrationProgram(registration)
-  const selectedTemplate = registrationReferences.whatsappTemplates.find(
-    (template) => template.id === selectedTemplateId,
-  )
-  const whatsappUrl = getWhatsAppUrl(
-    parent?.phone ?? '',
-    buildWhatsAppMessage(selectedTemplate?.message, registration),
-  )
   const existingPayment = registration.payments?.[0] ?? null
 
   return (
@@ -366,38 +329,37 @@ export function RegistrationDetailPage() {
             <NotebookPen className="h-4 w-4" aria-hidden="true" />
             Not
           </a>
-          <a
-            href={whatsappUrl ?? undefined}
-            target="_blank"
-            rel="noreferrer"
-            aria-disabled={!whatsappUrl}
+          <button
+            type="button"
+            onClick={() =>
+              parent &&
+              openWhatsAppMessage({
+                defaultCategory: 'kayit',
+                entityId: registration.id,
+                entityType: 'registration',
+                name: parent.full_name,
+                phone: parent.phone,
+                variables: {
+                  kalan_odeme: formatCurrency(registration.remaining_amount),
+                  kayit_durumu: registration.status
+                    ? registrationStatusLabels[registration.status]
+                    : '',
+                  kayit_tarihi: registration.registration_date,
+                  net_fiyat: formatCurrency(registration.final_price),
+                  ogrenci_adi: student?.full_name,
+                  program_adi: program?.name,
+                  veli_adi: parent.full_name,
+                },
+              })
+            }
+            disabled={!parent?.phone}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             WhatsApp
-          </a>
+          </button>
         </div>
       </div>
-
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <label className="block max-w-md">
-          <span className="text-sm font-medium text-neutral-700">
-            WhatsApp şablonu
-          </span>
-          <select
-            value={selectedTemplateId}
-            onChange={(event) => setSelectedTemplateId(event.target.value)}
-            className="mt-2 h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-          >
-            <option value="">Şablon seçilmedi</option>
-            {registrationReferences.whatsappTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DetailField label="Veli" value={parent?.full_name} />

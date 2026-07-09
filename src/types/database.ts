@@ -225,6 +225,17 @@ export type WhatsAppTemplate = {
   created_at: Timestamp | null
 }
 
+export type WhatsAppMessageLog = {
+  id: DatabaseId
+  template_id: DatabaseId | null
+  entity_type: string | null
+  entity_id: DatabaseId | null
+  phone: string | null
+  message: string | null
+  user_id: DatabaseId | null
+  opened_at: Timestamp | null
+}
+
 export type Note = {
   id: DatabaseId
   entity_type: string

@@ -1,6 +1,7 @@
-import { ExternalLink, UsersRound } from 'lucide-react'
+import { ExternalLink, MessageCircle, UsersRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { registrationStatusLabels } from '../../../utils/labels'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getStudentParent,
   getStudentProgramLabel,
@@ -13,6 +14,7 @@ type StudentCardProps = {
 
 export function StudentCard({ student }: StudentCardProps) {
   const parent = getStudentParent(student)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   return (
     <article className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -47,7 +49,7 @@ export function StudentCard({ student }: StudentCardProps) {
         </div>
       </dl>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
         <Link
           to={`/students/${student.id}`}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
@@ -64,6 +66,30 @@ export function StudentCard({ student }: StudentCardProps) {
             Veliye Git
           </Link>
         ) : null}
+        <button
+          type="button"
+          disabled={!parent?.phone}
+          onClick={() =>
+            parent &&
+            openWhatsAppMessage({
+              defaultCategory: 'ogrenci',
+              entityId: student.id,
+              entityType: 'student',
+              name: parent.full_name,
+              phone: parent.phone,
+              variables: {
+                ogrenci_adi: student.full_name,
+                ogrenci_yasi: student.age,
+                veli_adi: parent.full_name,
+                veli_telefonu: parent.phone,
+              },
+            })
+          }
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          WhatsApp
+        </button>
       </div>
     </article>
   )

@@ -15,7 +15,6 @@ import { InstallmentsTable } from '../features/payments/components/InstallmentsT
 import { PaymentForm } from '../features/payments/components/PaymentForm'
 import { PaymentSummary } from '../features/payments/components/PaymentSummary'
 import {
-  buildPaymentWhatsAppMessage,
   collectPayment,
   fetchPaymentDetail,
   fetchPaymentReferences,
@@ -41,6 +40,7 @@ import type {
   TaskFormValues,
   TaskReferences,
 } from '../features/tasks/types'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
@@ -50,7 +50,6 @@ import {
   registrationStatusLabels,
   taskStatusLabels,
 } from '../utils/labels'
-import { getWhatsAppUrl } from '../utils/phone'
 
 const emptyPaymentReferences: PaymentReferences = {
   registrations: [],
@@ -119,13 +118,13 @@ export function PaymentDetailPage() {
     useState<TaskReferences>(emptyTaskReferences)
   const [selectedInstallment, setSelectedInstallment] =
     useState<PaymentInstallment | null>(null)
-  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [isPaymentFormOpen, setIsPaymentFormOpen] = useState(false)
   const [isCollectOpen, setIsCollectOpen] = useState(false)
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   usePageTitle(payment ? 'Ödeme Detayı' : 'Ödeme Detayı')
 
@@ -245,13 +244,6 @@ export function PaymentDetailPage() {
   const student = getPaymentStudent(payment)
   const program = getPaymentProgram(payment)
   const registration = getPaymentRegistration(payment)
-  const selectedTemplate = paymentReferences.whatsappTemplates.find(
-    (template) => template.id === selectedTemplateId,
-  )
-  const whatsappUrl = getWhatsAppUrl(
-    parent?.phone ?? '',
-    buildPaymentWhatsAppMessage(selectedTemplate?.message, payment),
-  )
   const paidInstallments = payment.installments?.filter(
     (installment) => installment.status === 'odendi',
   ).length
@@ -321,38 +313,38 @@ export function PaymentDetailPage() {
             <NotebookPen className="h-4 w-4" aria-hidden="true" />
             Not
           </a>
-          <a
-            href={whatsappUrl ?? undefined}
-            target="_blank"
-            rel="noreferrer"
-            aria-disabled={!whatsappUrl}
+          <button
+            type="button"
+            onClick={() =>
+              parent &&
+              openWhatsAppMessage({
+                defaultCategory: 'odeme',
+                entityId: payment.id,
+                entityType: 'payment',
+                name: parent.full_name,
+                phone: parent.phone,
+                variables: {
+                  en_yakin_odeme_tarihi: payment.nearest_due_date,
+                  geciken_tutar: formatCurrency(payment.overdue_amount),
+                  kalan_tutar: formatCurrency(
+                    Number(payment.remaining_amount ?? 0),
+                  ),
+                  odenen_tutar: formatCurrency(Number(payment.paid_amount ?? 0)),
+                  ogrenci_adi: student?.full_name,
+                  program_adi: program?.name,
+                  toplam_tutar: formatCurrency(Number(payment.total_amount ?? 0)),
+                  veli_adi: parent.full_name,
+                },
+              })
+            }
+            disabled={!parent?.phone}
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
             WhatsApp
-          </a>
+          </button>
         </div>
       </div>
-
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <label className="block max-w-md">
-          <span className="text-sm font-medium text-neutral-700">
-            WhatsApp şablonu
-          </span>
-          <select
-            value={selectedTemplateId}
-            onChange={(event) => setSelectedTemplateId(event.target.value)}
-            className="mt-2 h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-          >
-            <option value="">Şablon seçilmedi</option>
-            {paymentReferences.whatsappTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.title}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
 
       <PaymentSummary
         items={[

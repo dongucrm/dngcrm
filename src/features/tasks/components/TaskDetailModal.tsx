@@ -1,6 +1,7 @@
-import { X } from 'lucide-react'
+import { MessageCircle, X } from 'lucide-react'
 import { formatNullableDateTime } from '../../../utils/date'
 import { leadPriorityLabels, taskStatusLabels } from '../../../utils/labels'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getTaskAssignee,
   getTaskLead,
@@ -27,6 +28,8 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 }
 
 export function TaskDetailModal({ onClose, task }: TaskDetailModalProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   if (!task) {
     return null
   }
@@ -35,6 +38,7 @@ export function TaskDetailModal({ onClose, task }: TaskDetailModalProps) {
   const parent = getTaskParent(task)
   const assignee = getTaskAssignee(task)
   const program = getTaskProgram(task)
+  const messageTarget = lead ?? parent
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-neutral-950/40 px-4 py-6">
@@ -48,14 +52,40 @@ export function TaskDetailModal({ onClose, task }: TaskDetailModalProps) {
               {task.title}
             </h2>
           </div>
-          <button
-            type="button"
-            aria-label="Kapat"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={!messageTarget?.phone}
+              onClick={() =>
+                messageTarget &&
+                openWhatsAppMessage({
+                  defaultCategory: lead ? 'lead' : 'veli',
+                  entityId: task.id,
+                  entityType: 'task',
+                  name: messageTarget.full_name,
+                  phone: messageTarget.phone,
+                  variables: {
+                    cocuk_adi: lead?.child_name,
+                    program_adi: program?.name,
+                    telefon: messageTarget.phone,
+                    veli_adi: messageTarget.full_name,
+                  },
+                })
+              }
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-200 px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              WhatsApp
+            </button>
+            <button
+              type="button"
+              aria-label="Kapat"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-5 px-5 py-5">

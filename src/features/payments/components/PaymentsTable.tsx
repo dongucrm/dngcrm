@@ -8,7 +8,6 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { paymentStatusLabels } from '../../../utils/labels'
-import { getWhatsAppUrl } from '../../../utils/phone'
 import {
   getPaymentParentRecord,
   getPaymentProgram,
@@ -23,7 +22,7 @@ type PaymentsTableProps = {
   onCreateTask: (payment: PaymentRecord) => void
   onEdit: (payment: PaymentRecord) => void
   onShowInstallments: (payment: PaymentRecord) => void
-  onWhatsApp: (payment: PaymentRecord) => string | null
+  onWhatsApp: (payment: PaymentRecord) => void
 }
 
 function formatCurrency(value: number | null | undefined) {
@@ -65,7 +64,6 @@ export function PaymentsTable({
             const parent = getPaymentParentRecord(payment)
             const student = getPaymentStudent(payment)
             const program = getPaymentProgram(payment)
-            const whatsappUrl = onWhatsApp(payment) ?? getWhatsAppUrl(parent?.phone ?? '')
 
             return (
               <tr key={payment.id} className="hover:bg-neutral-50">
@@ -138,16 +136,15 @@ export function PaymentsTable({
                     >
                       <ListOrdered className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <a
-                      href={whatsappUrl ?? undefined}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-disabled={!whatsappUrl}
+                    <button
+                      type="button"
+                      onClick={() => onWhatsApp(payment)}
+                      disabled={!parent?.phone}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 hover:bg-white aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       aria-label="WhatsApp"
                     >
                       <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    </a>
+                    </button>
                     <button
                       type="button"
                       onClick={() => onCreateTask(payment)}

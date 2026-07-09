@@ -15,6 +15,7 @@ import {
 } from '../features/parents/services/parentService'
 import type { ParentReferences } from '../features/parents/types'
 import { LeadTasksSection } from '../features/tasks/components/LeadTasksSection'
+import { useWhatsAppMessage } from '../features/whatsapp/providers/WhatsAppMessageContext'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatNullableDateTime } from '../utils/date'
@@ -22,7 +23,7 @@ import {
   leadProbabilityLabels,
   leadStatusLabels,
 } from '../utils/labels'
-import { formatPhoneForDisplay, getWhatsAppUrl } from '../utils/phone'
+import { formatPhoneForDisplay } from '../utils/phone'
 
 const emptyParentReferences: ParentReferences = {
   programs: [],
@@ -66,6 +67,7 @@ export function LeadDetailPage() {
   )
   const [isConversionOpen, setIsConversionOpen] = useState(false)
   const [savingConversion, setSavingConversion] = useState(false)
+  const { openWhatsAppMessage } = useWhatsAppMessage()
 
   usePageTitle(lead ? `${lead.full_name} Lead Detayı` : 'Lead Detayı')
 
@@ -109,7 +111,6 @@ export function LeadDetailPage() {
   const currentLead = lead
   const program = getLeadProgram(currentLead)
   const assignee = getLeadAssignee(currentLead)
-  const whatsappUrl = getWhatsAppUrl(currentLead.phone)
 
   async function handleConvertLead(values: {
     createRegistration: boolean
@@ -158,17 +159,31 @@ export function LeadDetailPage() {
         <div className="flex flex-wrap gap-2">
           <LeadStatusBadge status={currentLead.status} />
           <LeadPriorityBadge priority={currentLead.priority} />
-          {whatsappUrl ? (
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-            >
-              <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              WhatsApp
-            </a>
-          ) : null}
+          <button
+            type="button"
+            onClick={() =>
+              openWhatsAppMessage({
+                defaultCategory: 'lead',
+                entityId: currentLead.id,
+                entityType: 'lead',
+                name: currentLead.full_name,
+                phone: currentLead.phone,
+                variables: {
+                  cocuk_adi: currentLead.child_name,
+                  cocuk_yasi: currentLead.child_age,
+                  kaynak: currentLead.source,
+                  program_adi: program?.name,
+                  sonraki_arama_tarihi: currentLead.next_call_date,
+                  telefon: currentLead.phone,
+                  veli_adi: currentLead.full_name,
+                },
+              })
+            }
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            WhatsApp
+          </button>
           <button
             type="button"
             onClick={() => setIsConversionOpen(true)}

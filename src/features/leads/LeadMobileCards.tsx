@@ -6,6 +6,7 @@ import {
   PhoneCall,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useWhatsAppMessage } from '../whatsapp/providers/WhatsAppMessageContext'
 import { leadProbabilityLabels } from '../../utils/labels'
 import { LeadPriorityBadge, LeadStatusBadge } from './LeadStatusBadge'
 import type { LeadQuickAction, LeadRecord } from './types'
@@ -14,7 +15,6 @@ import {
   formatPhoneForDisplay,
   getLeadAssignee,
   getLeadProgram,
-  getWhatsAppUrl,
 } from './utils'
 
 type LeadMobileCardsProps = {
@@ -28,12 +28,13 @@ export function LeadMobileCards({
   onEdit,
   onQuickAction,
 }: LeadMobileCardsProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <section className="space-y-3 lg:hidden">
       {leads.map((lead) => {
         const program = getLeadProgram(lead)
         const assignee = getLeadAssignee(lead)
-        const whatsappUrl = getWhatsAppUrl(lead.phone)
 
         return (
           <article
@@ -113,16 +114,33 @@ export function LeadMobileCards({
                 <Pencil className="h-4 w-4" aria-hidden="true" />
                 Düzenle
               </button>
-              <a
-                href={whatsappUrl ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                aria-disabled={!whatsappUrl}
+              <button
+                type="button"
+                onClick={() =>
+                  openWhatsAppMessage({
+                    defaultCategory: 'lead',
+                    entityId: lead.id,
+                    entityType: 'lead',
+                    name: lead.full_name,
+                    phone: lead.phone,
+                    variables: {
+                      cocuk_adi: lead.child_name,
+                      cocuk_yasi: lead.child_age,
+                      kaynak: lead.source,
+                      program_adi: program?.name,
+                      sonraki_arama_tarihi: formatNullableDateTime(
+                        lead.next_call_date,
+                      ),
+                      telefon: lead.phone,
+                      veli_adi: lead.full_name,
+                    },
+                  })
+                }
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
                 WhatsApp
-              </a>
+              </button>
               <button
                 type="button"
                 onClick={() => onQuickAction({ type: 'call', lead })}

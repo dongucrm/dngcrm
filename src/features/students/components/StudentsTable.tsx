@@ -1,6 +1,14 @@
-import { ExternalLink, FilePlus2, NotebookPen, Pencil, UsersRound } from 'lucide-react'
+import {
+  ExternalLink,
+  FilePlus2,
+  MessageCircle,
+  NotebookPen,
+  Pencil,
+  UsersRound,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { registrationStatusLabels } from '../../../utils/labels'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getStudentParent,
   getStudentProgramLabel,
@@ -13,6 +21,8 @@ type StudentsTableProps = {
 }
 
 export function StudentsTable({ onEdit, students }: StudentsTableProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <section className="hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:block">
       <div className="overflow-x-auto">
@@ -100,6 +110,33 @@ export function StudentsTable({ onEdit, students }: StudentsTableProps) {
                           Veli
                         </Link>
                       ) : null}
+                      <button
+                        type="button"
+                        disabled={!parent?.phone}
+                        onClick={() =>
+                          parent &&
+                          openWhatsAppMessage({
+                            defaultCategory: 'ogrenci',
+                            entityId: student.id,
+                            entityType: 'student',
+                            name: parent.full_name,
+                            phone: parent.phone,
+                            variables: {
+                              ogrenci_adi: student.full_name,
+                              ogrenci_yasi: student.age,
+                              veli_adi: parent.full_name,
+                              veli_telefonu: parent.phone,
+                            },
+                          })
+                        }
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <MessageCircle
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                        WhatsApp
+                      </button>
                       <Link
                         to={`/students/${student.id}`}
                         className="inline-flex h-9 items-center gap-1 rounded-lg border border-neutral-200 bg-white px-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50"

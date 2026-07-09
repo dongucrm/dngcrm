@@ -19,6 +19,7 @@ import { RegistrationsPage } from '../pages/RegistrationsPage'
 import { StudentDetailPage } from '../pages/StudentDetailPage'
 import { StudentsPage } from '../pages/StudentsPage'
 import { TasksPage } from '../pages/TasksPage'
+import { WhatsAppTemplatesPage } from '../pages/WhatsAppTemplatesPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleBasedRoute } from './RoleBasedRoute'
 
@@ -33,6 +34,9 @@ const registrationsMenuItem = menuItems.find(
 const paymentsMenuItem = menuItems.find((item) => item.id === 'payments')
 const callsMenuItem = menuItems.find((item) => item.id === 'call-list')
 const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
+const whatsappTemplatesMenuItem = menuItems.find(
+  (item) => item.id === 'whatsapp-templates',
+)
 const placeholderMenuItems = moduleMenuItems.filter(
   (item) =>
     item.id !== 'leads' &&
@@ -42,7 +46,8 @@ const placeholderMenuItems = moduleMenuItems.filter(
     item.id !== 'registrations' &&
     item.id !== 'payments' &&
     item.id !== 'call-list' &&
-    item.id !== 'tasks',
+    item.id !== 'tasks' &&
+    item.id !== 'whatsapp-templates',
 )
 
 function getRoutePath(path: string) {
@@ -230,6 +235,20 @@ export function AppRoutes() {
               <ProtectedRoute>
                 <RoleBasedRoute allowedRoles={tasksMenuItem.routeRoles}>
                   <TasksPage />
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            }
+          />
+        ) : null}
+        {whatsappTemplatesMenuItem ? (
+          <Route
+            path={getRoutePath(whatsappTemplatesMenuItem.path)}
+            element={
+              <ProtectedRoute>
+                <RoleBasedRoute
+                  allowedRoles={whatsappTemplatesMenuItem.routeRoles}
+                >
+                  <WhatsAppTemplatesPage />
                 </RoleBasedRoute>
               </ProtectedRoute>
             }

@@ -1,7 +1,7 @@
 import { Eye, MessageCircle, UserPen } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { registrationStatusLabels } from '../../../utils/labels'
-import { getWhatsAppUrl } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getRegistrationParent,
   getRegistrationProgram,
@@ -26,13 +26,14 @@ export function RegistrationCards({
   onEdit,
   registrations,
 }: RegistrationCardsProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <div className="grid gap-3 lg:hidden">
       {registrations.map((registration) => {
         const parent = getRegistrationParent(registration)
         const student = getRegistrationStudent(registration)
         const program = getRegistrationProgram(registration)
-        const whatsappUrl = getWhatsAppUrl(parent?.phone ?? '')
 
         return (
           <article
@@ -90,16 +91,37 @@ export function RegistrationCards({
                 <UserPen className="h-4 w-4" aria-hidden="true" />
                 Düzenle
               </button>
-              <a
-                href={whatsappUrl ?? undefined}
-                target="_blank"
-                rel="noreferrer"
-                aria-disabled={!whatsappUrl}
+              <button
+                type="button"
+                onClick={() =>
+                  parent &&
+                  openWhatsAppMessage({
+                    defaultCategory: 'kayit',
+                    entityId: registration.id,
+                    entityType: 'registration',
+                    name: parent.full_name,
+                    phone: parent.phone,
+                    variables: {
+                      kalan_odeme: formatCurrency(
+                        registration.remaining_amount,
+                      ),
+                      kayit_durumu: registration.status
+                        ? registrationStatusLabels[registration.status]
+                        : '',
+                      kayit_tarihi: registration.registration_date,
+                      net_fiyat: formatCurrency(registration.final_price),
+                      ogrenci_adi: student?.full_name,
+                      program_adi: program?.name,
+                      veli_adi: parent.full_name,
+                    },
+                  })
+                }
+                disabled={!parent?.phone}
                 className="inline-flex h-9 w-10 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 aria-disabled:pointer-events-none aria-disabled:opacity-50"
                 aria-label="WhatsApp"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              </a>
+              </button>
             </div>
           </article>
         )

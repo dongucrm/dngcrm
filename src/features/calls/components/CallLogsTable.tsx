@@ -12,10 +12,8 @@ import {
   leadPriorityLabels,
   leadProbabilityLabels,
 } from '../../../utils/labels'
-import {
-  formatPhoneForDisplay,
-  getWhatsAppUrl,
-} from '../../../utils/phone'
+import { formatPhoneForDisplay } from '../../../utils/phone'
+import { useWhatsAppMessage } from '../../whatsapp/providers/WhatsAppMessageContext'
 import {
   getCallTargetAssignee,
   getCallTargetProgram,
@@ -59,6 +57,8 @@ export function CallLogsTable({
   onEditLog,
   targets,
 }: CallLogsTableProps) {
+  const { openWhatsAppMessage } = useWhatsAppMessage()
+
   return (
     <section className="hidden rounded-lg border border-neutral-200 bg-white shadow-sm lg:block">
       <div className="overflow-x-auto">
@@ -91,7 +91,6 @@ export function CallLogsTable({
             {targets.map((target) => {
               const program = getCallTargetProgram(target)
               const assignee = getCallTargetAssignee(target)
-              const whatsappUrl = getWhatsAppUrl(target.phone)
               const latestLog = target.latest_call_log
               const isLogEditable = canEditLog(latestLog, isAdmin, authUserId)
 
@@ -138,11 +137,26 @@ export function CallLogsTable({
                   </td>
                   <td className="px-4 py-4 align-top">
                     <div className="flex justify-end gap-2">
-                      <a
-                        href={whatsappUrl ?? undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-disabled={!whatsappUrl}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsAppMessage({
+                            defaultCategory: 'lead',
+                            entityId: target.id,
+                            entityType: 'lead',
+                            name: target.full_name,
+                            phone: target.phone,
+                            variables: {
+                              cocuk_adi: target.child_name,
+                              cocuk_yasi: target.child_age,
+                              kaynak: target.source,
+                              program_adi: program?.name,
+                              sonraki_arama_tarihi: target.next_call_date,
+                              telefon: target.phone,
+                              veli_adi: target.full_name,
+                            },
+                          })
+                        }
                         className="inline-flex h-9 items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       >
                         <MessageCircle
@@ -150,7 +164,7 @@ export function CallLogsTable({
                           aria-hidden="true"
                         />
                         WhatsApp
-                      </a>
+                      </button>
                       <button
                         type="button"
                         onClick={() => onAddCall(target)}
