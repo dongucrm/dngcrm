@@ -31,7 +31,18 @@ jobs:
         uses: actions/configure-pages@v6
 
       - name: Install dependencies
-        run: npm ci --prefer-online --no-audit --fund=false
+        run: |
+          npm ci --prefer-online --no-audit --fund=false || {
+            latest_log="$(ls -t "$HOME"/.npm/_logs/*.log 2>/dev/null | head -n 1 || true)"
+            if [ -n "$latest_log" ]; then
+              tail -n 120 "$latest_log"
+              message="$(tail -n 30 "$latest_log" | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')"
+              echo "::error title=npm ci failed::$message"
+            else
+              echo "::error title=npm ci failed::npm did not write a debug log."
+            fi
+            exit 1
+          }
 
       - name: Validate Supabase secrets
         run: |
