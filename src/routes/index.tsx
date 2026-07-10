@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { menuItems, moduleMenuItems } from '../config/menu'
 import { AppLayout } from '../layouts/AppLayout'
@@ -11,7 +12,6 @@ import { ModulePlaceholderPage } from '../pages/ModulePlaceholderPage'
 import { ParentDetailPage } from '../pages/ParentDetailPage'
 import { ParentsPage } from '../pages/ParentsPage'
 import { PaymentDetailPage } from '../pages/PaymentDetailPage'
-import { PaymentsPage } from '../pages/PaymentsPage'
 import { ProgramDetailPage } from '../pages/ProgramDetailPage'
 import { ProgramsPage } from '../pages/ProgramsPage'
 import { RegistrationDetailPage } from '../pages/RegistrationDetailPage'
@@ -19,9 +19,24 @@ import { RegistrationsPage } from '../pages/RegistrationsPage'
 import { StudentDetailPage } from '../pages/StudentDetailPage'
 import { StudentsPage } from '../pages/StudentsPage'
 import { TasksPage } from '../pages/TasksPage'
-import { WhatsAppTemplatesPage } from '../pages/WhatsAppTemplatesPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { RoleBasedRoute } from './RoleBasedRoute'
+
+const PaymentsPage = lazy(() =>
+  import('../pages/PaymentsPage').then((module) => ({
+    default: module.PaymentsPage,
+  })),
+)
+const ReportsPage = lazy(() =>
+  import('../pages/ReportsPage').then((module) => ({
+    default: module.ReportsPage,
+  })),
+)
+const WhatsAppTemplatesPage = lazy(() =>
+  import('../pages/WhatsAppTemplatesPage').then((module) => ({
+    default: module.WhatsAppTemplatesPage,
+  })),
+)
 
 const dashboardMenuItem = menuItems.find((item) => item.id === 'dashboard')
 const leadsMenuItem = menuItems.find((item) => item.id === 'leads')
@@ -37,6 +52,7 @@ const tasksMenuItem = menuItems.find((item) => item.id === 'tasks')
 const whatsappTemplatesMenuItem = menuItems.find(
   (item) => item.id === 'whatsapp-templates',
 )
+const reportsMenuItem = menuItems.find((item) => item.id === 'reports')
 const placeholderMenuItems = moduleMenuItems.filter(
   (item) =>
     item.id !== 'leads' &&
@@ -47,11 +63,26 @@ const placeholderMenuItems = moduleMenuItems.filter(
     item.id !== 'payments' &&
     item.id !== 'call-list' &&
     item.id !== 'tasks' &&
-    item.id !== 'whatsapp-templates',
+    item.id !== 'whatsapp-templates' &&
+    item.id !== 'reports',
 )
 
 function getRoutePath(path: string) {
   return path.replace(/^\//, '')
+}
+
+function withLazyFallback(element: ReactNode) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm font-medium text-neutral-600 shadow-sm">
+          Sayfa yukleniyor...
+        </div>
+      }
+    >
+      {element}
+    </Suspense>
+  )
 }
 
 export function AppRoutes() {
@@ -211,7 +242,7 @@ export function AppRoutes() {
               element={
                 <ProtectedRoute>
                   <RoleBasedRoute allowedRoles={paymentsMenuItem.routeRoles}>
-                    <PaymentsPage />
+                    {withLazyFallback(<PaymentsPage />)}
                   </RoleBasedRoute>
                 </ProtectedRoute>
               }
@@ -248,7 +279,19 @@ export function AppRoutes() {
                 <RoleBasedRoute
                   allowedRoles={whatsappTemplatesMenuItem.routeRoles}
                 >
-                  <WhatsAppTemplatesPage />
+                  {withLazyFallback(<WhatsAppTemplatesPage />)}
+                </RoleBasedRoute>
+              </ProtectedRoute>
+            }
+          />
+        ) : null}
+        {reportsMenuItem ? (
+          <Route
+            path={getRoutePath(reportsMenuItem.path)}
+            element={
+              <ProtectedRoute>
+                <RoleBasedRoute allowedRoles={reportsMenuItem.routeRoles}>
+                  {withLazyFallback(<ReportsPage />)}
                 </RoleBasedRoute>
               </ProtectedRoute>
             }

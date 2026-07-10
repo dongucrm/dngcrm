@@ -12,6 +12,7 @@ import {
   UserX,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { StatCard } from '../components/StatCard'
 import { fetchDashboardCallMetrics } from '../features/calls/services/callLogService'
 import type { CallDashboardMetrics } from '../features/calls/types'
@@ -386,6 +387,12 @@ export function DashboardPage() {
         <h1 className="mt-1 text-2xl font-semibold text-neutral-950 sm:text-3xl">
           Dashboard
         </h1>
+        <Link
+          to="/reports"
+          className="mt-3 inline-flex h-10 items-center justify-center rounded-lg border border-neutral-200 bg-white px-4 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+        >
+          Detayli Raporlari Gor
+        </Link>
       </div>
 
       {loading ? (

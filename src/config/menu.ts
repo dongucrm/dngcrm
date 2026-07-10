@@ -140,8 +140,8 @@ export const menuItems: MenuItem[] = [
     label: 'Raporlar',
     path: '/reports',
     icon: BarChart3,
-    visibleRoles: adminOnly,
-    routeRoles: adminOnly,
+    visibleRoles: allRoles,
+    routeRoles: allRoles,
     editRoles: adminOnly,
   },
   {
