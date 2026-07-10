@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm ci --prefer-online --no-audit --fund=false || {
+          npm ci --prefer-online --no-audit --no-fund || {
             latest_log="$(ls -t "$HOME"/.npm/_logs/*.log 2>/dev/null | head -n 1 || true)"
             if [ -n "$latest_log" ]; then
               tail -n 120 "$latest_log"
